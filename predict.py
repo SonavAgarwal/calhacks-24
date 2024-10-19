@@ -41,8 +41,10 @@ img_path = "./images/Welikson-Osborne-Harvey-0009.jpg"
 raw_image = Image.open(img_path).convert("RGB")
 
 # Use YOLOv8 to get bounding boxes
-model = YOLO("yolo11n.pt")
-results = model(img_path)
+model = YOLO("yolov8n.pt")
+# Force GPU usage if available
+model.to('cuda' if torch.cuda.is_available() else 'cpu')
+results = model(img_path, conf=0.00005)
 
 # Extract bounding boxes
 bboxes = []
@@ -62,12 +64,13 @@ for bbox in bboxes:
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Use SAM to generate masks
-transformers.logging.set_verbosity_info()
-generator = pipeline("mask-generation", model="facebook/sam-vit-huge", device=device)
-outputs = generator(raw_image, prompts=prompts, points_per_batch=256)
-masks = outputs["masks"]
 
-os.makedirs("./predictions", exist_ok=True)
-save_path = "./predictions/masked_image.png"
-show_masks_on_image(raw_image, masks, bboxes, save_path)
+# Use SAM to generate masks
+# transformers.logging.set_verbosity_info()
+# generator = pipeline("mask-generation", model="facebook/sam-vit-huge", device=device)
+# outputs = generator(raw_image, prompts=prompts)
+# masks = outputs["masks"]
+
+# os.makedirs("./predictions", exist_ok=True)
+# save_path = "./predictions/masked_image.png"
+# show_masks_on_image(raw_image, masks, bboxes, save_path)
