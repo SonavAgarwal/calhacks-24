@@ -34,7 +34,6 @@ def show_masks_on_image(raw_image, masks, bboxes, save_path):
   plt.axis("off")
   plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
   plt.close()
-  del mask
   gc.collect()
 
 # Load the image
@@ -42,7 +41,7 @@ img_path = "./images/Welikson-Osborne-Harvey-0009.jpg"
 raw_image = Image.open(img_path).convert("RGB")
 
 # Use YOLOv8 to get bounding boxes
-model = YOLO("yolov8n.pt")
+model = YOLO("yolo11n.pt")
 results = model(img_path)
 
 # Extract bounding boxes
@@ -50,6 +49,8 @@ bboxes = []
 for result in results:
   for box in result.boxes:
     bboxes.append(box.xyxy.numpy())
+
+show_masks_on_image(raw_image, [], bboxes, "./predictions/bboxes.png")
 
 # Prepare prompts for SAM
 prompts = []
