@@ -23,7 +23,7 @@ preprocess = transforms.Compose([
 ])
     
 # Initialize ChromaDB client
-client = chromadb.Client()
+client = chromadb.HttpClient(host='18.225.156.100', port=8000)
 
 # Create or get a collection
 collection = client.create_collection("image_vectors")
