@@ -1,41 +1,73 @@
 import torch
-import matplotlib.pyplot as plt
-from PIL import Image
+import transformers
+from transformers import pipeline
 import numpy as np
-# from ultralytics import YOLO
-from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import gc
+from PIL import Image
+import requests
+from ultralytics import YOLO
+import os
 
+def show_mask(mask, ax, random_color=False):
+  if random_color:
+    color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
+  else:
+    color = np.array([30 / 255, 144 / 255, 255 / 255, 0.6])
+  h, w = mask.shape[-2:]
+  mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
+  ax.imshow(mask_image)
+  del mask
+  gc.collect()
 
-def show_anns(anns, borders=True):
-    if len(anns) == 0:
-        return
-    sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
-    ax = plt.gca()
-    ax.set_autoscale_on(False)
+def show_masks_on_image(raw_image, masks, bboxes, save_path):
+  plt.imshow(np.array(raw_image))
+  ax = plt.gca()
+  ax.set_autoscale_on(False)
+  for mask in masks:
+    show_mask(mask, ax=ax, random_color=True)
+  for bbox in bboxes:
+    x_min, y_min, x_max, y_max = bbox[0]
+    rect = patches.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min, linewidth=2, edgecolor='r', facecolor='none')
+    ax.add_patch(rect)
+  plt.axis("off")
+  plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+  plt.close()
+  gc.collect()
 
-    img = np.ones((sorted_anns[0]['segmentation'].shape[0], sorted_anns[0]['segmentation'].shape[1], 4))
-    img[:, :, 3] = 0
-    for ann in sorted_anns:
-        m = ann['segmentation']
-        color_mask = np.concatenate([np.random.random(3), [0.5]])
-        img[m] = color_mask 
-        if borders:
-            import cv2
-            contours, _ = cv2.findContours(m.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
-            # Try to smooth contours
-            contours = [cv2.approxPolyDP(contour, epsilon=0.01, closed=True) for contour in contours]
-            cv2.drawContours(img, contours, -1, (0, 0, 1, 0.4), thickness=1) 
+# Load the image
+img_path = "./images/Welikson-Osborne-Harvey-0009.jpg"
+raw_image = Image.open(img_path).convert("RGB")
 
-    ax.imshow(img)
+# Use YOLOv8 to get bounding boxes
+model = YOLO("yolo11n.pt")
+results = model(img_path)
 
-mask_generator = SAM2AutomaticMaskGenerator.from_pretrained("facebook/sam2-hiera-tiny")
+# Extract bounding boxes
+bboxes = []
+for result in results:
+  for box in result.boxes:
+    bboxes.append(box.xyxy.numpy())
 
-with torch.inference_mode():
-    image = "./images/groceries.jpg"
-    masks = mask_generator.generate(image)
+show_masks_on_image(raw_image, [], bboxes, "./predictions/bboxes.png")
 
-plt.figure(figsize=(20, 20))
-plt.imshow(image)
-show_anns(masks)
-plt.axis('off')
-plt.show()
+# Prepare prompts for SAM
+prompts = []
+for bbox in bboxes:
+  x_min, y_min, x_max, y_max = bbox[0]
+  prompts.append({
+    "bbox": [x_min, y_min, x_max, y_max]
+  })
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Use SAM to generate masks
+transformers.logging.set_verbosity_info()
+generator = pipeline("mask-generation", model="facebook/sam-vit-huge", device=device)
+outputs = generator(raw_image, prompts=prompts, points_per_batch=256)
+masks = outputs["masks"]
+
+os.makedirs("./predictions", exist_ok=True)
+save_path = "./predictions/masked_image.png"
+show_masks_on_image(raw_image, masks, bboxes, save_path)
