@@ -98,7 +98,7 @@ def increment_item_count(item_id):
     finally:
         conn.close()
 
-def update_item(name, description, category, price, count, item_id):
+def update_item(item_id, name, description, category, price):
     """
     Update an item in the Items table. If the item already exists, increment its count;
     if not, create a new item with the provided details.
