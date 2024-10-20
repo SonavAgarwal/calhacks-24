@@ -50,45 +50,47 @@ def get_image_data(image: Image, transparent_image: Image):
         return (vector_embedding, name, desc, category, price)
 
 def get_image_filtered_list_data(images: List[Image], transparent_images: List[Image], bboxes: List[List[int]]):
-    """
-    Given a list of images (tensors) returns a list of
-    tuples where each tuple contains important data of the image
+  """
+  Given a list of images (tensors) returns a list of
+  tuples where each tuple contains important data of the image
 
-    Args:
-    - list of unfiltered images
-    - list of bounding boxes of the images
+  Args:
+  - list of unfiltered images
+  - list of bounding boxes of the images
 
-    returns Tuple[vectorEmbedding, name, desc, category]
-    """
-    res = []
-    for image, transparent_image, bbox in zip(images, transparent_images, bboxes):
-        img_data = get_image_data(image, transparent_image)
-        if img_data: # only if image data is valid append
-            res.append(img_data)
-    return res
+  returns Tuple[vectorEmbedding, name, desc, category]
+  """
+  res = []
+  filtered_images = []
+  for image, transparent_image, bbox in zip(images, transparent_images, bboxes):
+    img_data = get_image_data(image, transparent_image)
+    if img_data: # only if image data is valid append
+      res.append(img_data)
+      filtered_images.append(image)
+  return res, filtered_images
 
 def process_video(video_path: str):
-    """
-    Args
-    - video: a video file of a room
+  """
+  Args
+  - video: a video file of a room
 
-    Return
-    - String: response of successful video upload
-    """
+  Return
+  - String: response of successful video upload
+  """
 
-    # 1) load video from video_path
-    stitcher.create_panorama(video_path)
+  # 1) load video from video_path
+  stitcher.create_panorama(video_path)
 
-    # 2) get items from the image
-    segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image("pano.png", debug=True)
+  # 2) get items from the image
+  segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image("pano.png", debug=True)
 
-    # 3) get image data from the segmented images
-    image_data = get_image_filtered_list_data(segmented_images, transparent_segmented_images, segmented_images_bboxes)
-    # 7.1) upload vector embedding + METADATA to chromadb
-    # 7.2) upload name, desc, category, price 
+  # 3) get image data from the segmented images
+  image_data, filtered_images = get_image_filtered_list_data(segmented_images, transparent_segmented_images, segmented_images_bboxes)
+  # 7.1) upload vector embedding + METADATA to chromadb
+  # 7.2) upload name, desc, category, price 
 
-    # transparent_segmented_images are the images we'd want to display on frontend
+  # filtered_images are the images we want to display on frontend
 
-    pass
+  pass
 
 process_video("../test3.mov")
