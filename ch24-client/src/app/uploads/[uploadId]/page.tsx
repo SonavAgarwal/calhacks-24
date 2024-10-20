@@ -1,16 +1,18 @@
 "use client"
 
+import ImageDialog from "@/components/ImageDialog"
 import { ItemsTable } from "@/components/items-table"
+import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog"
 import { Checkbox } from "@/components/ui/checkbox"
-import { items } from "@/lib/data"
-import { Item, UploadSessionResponse } from "@/lib/types"
+import { PLACEHOLDER_ITEMS } from "@/lib/data"
+import { Image, Item, UploadSessionResponse } from "@/lib/types"
 import {
     CellContext,
     ColumnDef,
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { twMerge } from "tailwind-merge"
 
@@ -19,15 +21,17 @@ interface Props {}
 const page = (props: Props) => {
     const { uploadId } = useParams()
 
+    const before = useSearchParams().get("before") === "true"
+
     const [loading, setLoading] = useState(true)
     const processing = useRef(true)
 
     const [response, setResponse] = useState<UploadSessionResponse | null>(null)
 
-    const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+    const [enlargedImage, setEnlargedImage] = useState<Image | null>(null)
+    const [enlargedRow, setEnlargedRow] = useState<Item | null>(null)
 
     const itemColumns = useMemo(() => {
-        const data = response?.items ?? []
         const itemsColumns: ColumnDef<Item>[] = [
             {
                 accessorKey: "name",
@@ -56,13 +60,13 @@ const page = (props: Props) => {
                 header: "Images",
                 cell: (info: CellContext<Item, unknown>) => (
                     <div className="flex items-center justify-center">
-                        {(info.getValue() as string[])
+                        {(info.getValue() as Image[])
                             .slice(0, 3)
                             .map((image, index) => (
                                 <img
-                                    // onClick={}
-                                    key={image}
-                                    src={image}
+                                    onClick={() => setEnlargedImage(image)}
+                                    key={image.id}
+                                    src={image.url}
                                     alt={info.row.original.name}
                                     className={twMerge(
                                         "h-10 w-10 rounded-md border-2 border-white object-cover",
@@ -79,12 +83,12 @@ const page = (props: Props) => {
                 accessorKey: "category",
                 header: "Category",
             },
-            // checkbox column
             {
                 accessorKey: "id",
                 header: "",
                 cell: ({ row }: CellContext<Item, unknown>) => (
                     <Checkbox
+                        onClick={(e) => e.stopPropagation()}
                         className="mr-4 h-6 w-6"
                         checked={row.getIsSelected()}
                         onCheckedChange={row.getToggleSelectedHandler()}
@@ -95,8 +99,46 @@ const page = (props: Props) => {
         return itemsColumns
     }, [response])
 
+    const items = useMemo<Item[]>(() => {
+        // filter items based on before
+        let data = response?.items ?? []
+
+        console.log("data", data)
+
+        if (before) {
+            console.log("filtering")
+            // only show rows that have an image with status pending
+            data = data.filter((item) =>
+                item.images.some((image) => image.status === "pending"),
+            )
+
+            // only show images with status pending
+            data.forEach((item) => {
+                item.images = item.images.filter(
+                    (image) => image.status === "pending",
+                )
+            })
+        } else {
+            // only show rows that have an image with status pending and before is false
+            data = data.filter((item) =>
+                item.images.some(
+                    (image) => image.status === "pending" && !image.before,
+                ),
+            )
+
+            // // only show images with status pending and before is false
+            // data.forEach((item) => {
+            //     item.images = item.images.filter(
+            //         (image) => image.status === "pending" && !image.before,
+            //     )
+            // })
+        }
+        console.log("data", data)
+        return data
+    }, [before, response])
+
     const table = useReactTable({
-        data: response?.items ?? [],
+        data: items,
         columns: itemColumns,
         getCoreRowModel: getCoreRowModel(),
         getRowId: (row) => row.id,
@@ -134,19 +176,36 @@ const page = (props: Props) => {
                     date: new Date(),
                     after: false,
                     processing: false,
-                    items: items,
+                    items: PLACEHOLDER_ITEMS,
                 })
-            }, 1000)
+                console.log("response", response)
+            }, 100)
         }
 
-        const interval = setInterval(() => {
-            if (processing.current) {
-                fetchData()
-            }
-        }, 0)
+        fetchData()
 
-        return () => clearInterval(interval)
+        // return () => clearInterval(interval)
     }, [uploadId])
+
+    const handleContinue = () => {
+        const selectedRows = table.getSelectedRowModel().rows
+
+        if (before) {
+            // add to inventory
+            console.log("Adding to inventory", selectedRows)
+        } else {
+            // claim items
+            console.log("Claiming items", selectedRows)
+            // store in local storage
+            localStorage.setItem(
+                "claimedItems",
+                JSON.stringify(selectedRows.map((row) => row.original)),
+            )
+
+            // open /pdf in a new tab
+            window.open("/pdf", "_blank")
+        }
+    }
 
     if (loading || processing.current) {
         return (
@@ -180,41 +239,65 @@ const page = (props: Props) => {
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col items-center gap-4 p-4 pt-12">
-            <div className="flex w-full flex-row gap-4">
-                <div className="flex-1">
-                    <h1 className="w-full text-2xl font-bold">
-                        We found {response.items.length} items!
-                    </h1>
-                    <p className="w-full text-base">
-                        Select the ones you want to add to your inventory.
-                    </p>
+        <>
+            <ImageDialog
+                enlargedImage={enlargedImage}
+                setEnlargedImage={setEnlargedImage}
+            />
+
+            <div className="flex min-h-screen w-full flex-col items-center gap-4 p-4 pt-12">
+                <div className="flex w-full flex-row gap-4">
+                    <div className="flex-1">
+                        <h1 className="w-full text-2xl font-bold">
+                            We found {items?.length} items!
+                        </h1>
+                        <p className="w-full text-base">
+                            {before
+                                ? "Select the ones you want to add to your inventory."
+                                : "Select the ones you want to claim."}
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        <button
+                            className="w-full rounded-lg bg-primary px-4 py-2 text-white transition-opacity disabled:opacity-50"
+                            disabled={
+                                table.getSelectedRowModel().rows.length === 0
+                            }
+                            onClick={handleContinue}
+                        >
+                            {before ? "Add to Inventory" : "Claim Items"}
+                        </button>
+                    </div>
                 </div>
-                <div className="flex flex-col gap-4">
-                    <button
-                        className="w-full rounded-lg bg-primary px-4 py-2 text-white transition-opacity disabled:opacity-50"
-                        disabled={table.getSelectedRowModel().rows.length === 0}
-                    >
-                        Add to {response.after ? "Claims" : "Inventory"}
-                    </button>
+
+                <div className="flex w-full flex-col gap-4">
+                    {processing.current &&
+                        new Array(3).fill(0).map((_, index) => (
+                            // skeleton
+                            <div
+                                key={index}
+                                className="flex min-h-16 animate-pulse flex-col gap-2 rounded-lg bg-background p-4"
+                            ></div>
+                        ))}
+
+                    {!processing.current && response && (
+                        <ItemsTable
+                            data={response.items}
+                            table={table}
+                            onRowClick={(item) => {
+                                if (before) return
+                                if (enlargedRow === item) {
+                                    setEnlargedRow(null)
+                                    return
+                                }
+                                setEnlargedRow(item)
+                            }}
+                            expandedRow={enlargedRow}
+                        />
+                    )}
                 </div>
             </div>
-
-            <div className="flex w-full flex-col gap-4">
-                {processing.current &&
-                    new Array(3).fill(0).map((_, index) => (
-                        // skeleton
-                        <div
-                            key={index}
-                            className="flex min-h-16 animate-pulse flex-col gap-2 rounded-lg bg-background p-4"
-                        ></div>
-                    ))}
-
-                {!processing.current && response && (
-                    <ItemsTable data={response.items} table={table} />
-                )}
-            </div>
-        </div>
+        </>
     )
 }
 
