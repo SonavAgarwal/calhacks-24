@@ -4,6 +4,7 @@ from PIL.Image import Image, open
 import chromadb
 import os
 from typing import List
+import hyperbolic
 
 # Check for GPU availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,11 +73,18 @@ class Processing:
         """
 
         vector_embedding = Processing.get_image_vector_embedding(image)
-        name = '' # PRANAV: get name
-        desc = '' # PRANAV: get desc
-        category = '' # PRANAV: get category
 
-        return (vector_embedding, name, desc, category)
+        results = hyperbolic.process_images([image])
+        if not results:
+            return None
+        else:
+            result = results[0]
+
+            name = result['name'] # PRANAV: get name
+            desc = result['description'] # PRANAV: get desc
+            category = result['category'] # PRANAV: get category
+            price = result['price']
+            return (vector_embedding, name, desc, category, price)
 
     def get_image_list_data(images: List[Image]):
         """
