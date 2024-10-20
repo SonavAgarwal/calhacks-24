@@ -4,6 +4,7 @@ from PIL.Image import Image, open
 from typing import List
 from image_embedding import get_image_vector_embedding
 import hyperbolic
+import stitcher
 
 def get_items_from_image(image):
     """
@@ -73,6 +74,7 @@ def process_video(video_path: str):
     """
 
     # 1) load video from video_path
+    stitcher.create_panorama(video_path)
 
     # 2) convert video to panoramic
 
