@@ -1,14 +1,13 @@
 import torch
-import transformers
-from transformers import pipeline
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import gc
 from PIL import Image
-import requests
-from ultralytics import YOLO
 import os
+from transformers import pipeline, SamModel, SamProcessor
+from ultralytics import YOLO
+import supervision as sv
 
 def show_mask(mask, ax, random_color=False):
   if random_color:
@@ -21,53 +20,77 @@ def show_mask(mask, ax, random_color=False):
   del mask
   gc.collect()
 
-def show_masks_on_image(raw_image, masks, bboxes, save_path):
+def get_unique_filename(base_path):
+  if not os.path.exists(base_path):
+    return base_path
+  base, ext = os.path.splitext(base_path)
+  counter = 1
+  new_path = f"{base}_{counter}{ext}"
+  while os.path.exists(new_path):
+    counter += 1
+    new_path = f"{base}_{counter}{ext}"
+  return new_path
+
+def show_masks_and_boxes_on_image(raw_image, masks, bboxes, save_path):
+  save_path = get_unique_filename(save_path)
   plt.imshow(np.array(raw_image))
   ax = plt.gca()
   ax.set_autoscale_on(False)
   for mask in masks:
-    show_mask(mask, ax=ax, random_color=True)
+    for m in mask:
+      show_mask(np.array(m), ax=ax, random_color=True)
   for bbox in bboxes:
-    x_min, y_min, x_max, y_max = bbox[0]
-    rect = patches.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min, linewidth=2, edgecolor='r', facecolor='none')
+    x_min, y_min, x_max, y_max = bbox
+    rect = patches.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min, linewidth=1, edgecolor='g', facecolor='none')
     ax.add_patch(rect)
   plt.axis("off")
   plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
   plt.close()
   gc.collect()
 
-# Load the image
-img_path = "./images/Welikson-Osborne-Harvey-0009.jpg"
-raw_image = Image.open(img_path).convert("RGB")
+def detect_objects(img_path, yolo_model):
+  raw_image = Image.open(img_path).convert("RGB")
+  results = yolo_model(img_path, conf=0.01)[0]
+  results = sv.Detections.from_ultralytics(results).with_nms(threshold=0.05, class_agnostic=True)
+  bboxes = [result[0].tolist() for result in results]
+  return raw_image, bboxes
 
-# Use YOLOv8 to get bounding boxes
-model = YOLO("yolo11n.pt")
-results = model(img_path)
+def segment_image(raw_image, bboxes, model, processor, device):
+  inputs = processor(raw_image, return_tensors="pt").to(device)
+  image_embeddings = model.get_image_embeddings(inputs["pixel_values"])
 
-# Extract bounding boxes
-bboxes = []
-for result in results:
-  for box in result.boxes:
-    bboxes.append(box.xyxy.numpy())
+  inputs = processor(raw_image, input_boxes=[bboxes], return_tensors="pt").to(device)
+  inputs.pop("pixel_values", None)
+  inputs.update({"image_embeddings": image_embeddings})
 
-show_masks_on_image(raw_image, [], bboxes, "./predictions/bboxes.png")
+  with torch.no_grad():
+    outputs = model(**inputs, multimask_output=False)
 
-# Prepare prompts for SAM
-prompts = []
-for bbox in bboxes:
-  x_min, y_min, x_max, y_max = bbox[0]
-  prompts.append({
-    "bbox": [x_min, y_min, x_max, y_max]
-  })
+  masks = processor.image_processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu())
+  return masks[0]
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def segment(img_path):
+  yolo_model = YOLO("yolov8n.pt")
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  model = SamModel.from_pretrained("facebook/sam-vit-huge").to(device)
+  processor = SamProcessor.from_pretrained("facebook/sam-vit-huge")
 
-# Use SAM to generate masks
-transformers.logging.set_verbosity_info()
-generator = pipeline("mask-generation", model="facebook/sam-vit-huge", device=device)
-outputs = generator(raw_image, prompts=prompts, points_per_batch=256)
-masks = outputs["masks"]
+  raw_image, bboxes = detect_objects(img_path, yolo_model)
+  masks = segment_image(raw_image, bboxes, model, processor, device)
 
-os.makedirs("./predictions", exist_ok=True)
-save_path = "./predictions/masked_image.png"
-show_masks_on_image(raw_image, masks, bboxes, save_path)
+  segmented_images = []
+  for mask, bbox in zip(masks, bboxes):
+      x_min, y_min, x_max, y_max = bbox
+      cropped_image = raw_image.crop((x_min, y_min, x_max, y_max))
+      mask_pil = Image.fromarray((mask.squeeze().numpy() * 255).astype(np.uint8))
+      mask_resized = mask_pil.resize(cropped_image.size, resample=Image.BILINEAR)
+      segmented_image = Image.composite(cropped_image, Image.new("RGB", cropped_image.size), mask_resized)
+      segmented_images.append(segmented_image)
+
+  return segmented_images
+
+# Example usage:
+img_path = "./images/pano.jpg"
+segmented_images = segment(img_path)
+for i, img in enumerate(segmented_images):
+    img.save(f"./predictions/segmented_{i}.png")
