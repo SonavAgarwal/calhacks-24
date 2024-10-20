@@ -1,8 +1,9 @@
 import torch
 from torchvision import models, transforms
-from PIL import Image
+from PIL.Image import Image, open
 import chromadb
 import os
+from typing import List
 
 # Check for GPU availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -46,10 +47,10 @@ class Processing:
         """
         
         """
-        image = Image.open(img_path).convert('RGB')
+        image = open(img_path).convert('RGB')
         return image
 
-    def get_image_vector_embedding(img_path):
+    def get_image_vector_embedding(image: Image):
         """
         Creates a vector embedding of an image using
         ResNet50 model with the output layer removed.
@@ -70,17 +71,33 @@ class Processing:
         
         return features.cpu().squeeze().numpy()
 
-    def get_image_data(image):
-        pass
+    def get_image_data(image: Image):
+        """
+        Given an Image, returns a tuple of all the image data
 
-    def get_image_list_data(list_of_images: list):
+        Returns:
+        - (vectorEmbedding, name, desc, category)
+        """
+
+        vector_embedding = Processing.get_image_vector_embedding(image)
+        name = '' # PRANAV: get name
+        desc = '' # PRANAV: get desc
+        category = '' # PRANAV: get category
+
+        return (vector_embedding, name, desc, category)
+
+    def get_image_list_data(images: List[Image]):
         """
         Given a list of images (tensors) returns a list of
         tuples where each tuple contains important data of the image
 
         returns Tuple[vectorEmbedding, name, desc, category]
         """
-        pass
+        res = []
+        for image in images:
+            img_data = Processing.get_image_data(image)
+            res.append(img_data)
+        return res
 
     def process_video(video):
         """
