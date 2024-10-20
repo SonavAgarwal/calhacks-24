@@ -5,10 +5,13 @@ import React, { useState } from "react"
 import Image from "next/image"
 import Dropzone from "react-dropzone"
 import { twMerge } from "tailwind-merge"
+import { useRouter } from "next/navigation"
 
 interface Props {}
 
 const page = (props: Props) => {
+    const router = useRouter()
+
     const [uploadType, setUploadType] = useState<"inventory" | "claims">(
         "inventory",
     )
@@ -19,6 +22,41 @@ const page = (props: Props) => {
         setFiles((prev) => [...prev, ...acceptedFiles])
     }
 
+    const [loading, setLoading] = useState(false)
+
+    const handleUpload = async () => {
+        // fetch example.com/upload with files, query param after is true if claims, false if inventory
+        // if successful, navigate to uploads/response.uploadId
+        // if not, show error
+        setLoading(true)
+        setTimeout(() => {
+            router.push(`/uploads/meow`)
+        }, 1000)
+        return
+
+        const formData = new FormData()
+        files.forEach((file) => {
+            formData.append("files", file)
+        })
+
+        const response = await fetch(
+            `https://example.com/upload?isClaims=${uploadType === "claims"}`,
+            {
+                method: "POST",
+                body: formData,
+            },
+        )
+
+        if (response.ok) {
+            const data = await response.json()
+            // navigate to uploads/response.uploadId
+
+            router.push(`/uploads/${data.uploadId}`)
+        } else {
+            console.error("Error uploading files")
+        }
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col items-center justify-center gap-4 p-4">
             {/* <h1 className="text-4xl font-bold w-full">Upload Media</h1> */}
@@ -27,7 +65,7 @@ const page = (props: Props) => {
             {/* the selected one is black background white text */}
             {/* the background should slide between the two options, like a pill */}
 
-            <div className="relative flex w-64 rounded-full bg-background">
+            <div className="border-border relative flex w-64 rounded-full border bg-background">
                 {/* Sliding background */}
                 <div
                     className={twMerge(
@@ -77,7 +115,10 @@ const page = (props: Props) => {
             >
                 {({ getRootProps, getInputProps }) => (
                     <div
-                        className="flex h-96 w-96 flex-col items-center justify-center rounded-xl bg-background p-4"
+                        className={twMerge(
+                            "border-border flex h-96 w-96 flex-col items-center justify-center rounded-xl border bg-background p-4 transition-opacity",
+                            loading && "opacity-35",
+                        )}
                         {...getRootProps()}
                     >
                         <input {...getInputProps()} />
@@ -108,7 +149,7 @@ const page = (props: Props) => {
                                         <img
                                             src={URL.createObjectURL(file)}
                                             alt={`uploaded file ${i}`}
-                                            className="rounded-xl object-cover"
+                                            className="border-border rounded-xl border object-cover"
                                         />
                                     </div>
                                 ))}
@@ -120,14 +161,16 @@ const page = (props: Props) => {
 
             <div className="flex w-96 justify-center gap-4">
                 <button
-                    className="flex-1 rounded-xl bg-background px-4 py-2 text-black"
+                    className="border-border flex-1 rounded-xl border bg-background px-4 py-2 text-black transition-opacity disabled:opacity-35"
                     onClick={() => setFiles([])}
+                    disabled={files.length === 0 || loading}
                 >
                     Clear
                 </button>
                 <button
-                    className="flex-1 rounded-xl bg-primary px-4 py-2 text-white"
-                    onClick={() => console.log(files)}
+                    className="flex-1 rounded-xl bg-primary px-4 py-2 text-white transition-opacity disabled:opacity-35"
+                    onClick={handleUpload}
+                    disabled={files.length === 0 || loading}
                 >
                     Upload
                 </button>

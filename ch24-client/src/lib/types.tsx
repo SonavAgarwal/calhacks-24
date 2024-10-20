@@ -1,22 +1,30 @@
 import {
-	CellContext,
-	ColumnDef,
-	createColumnHelper,
-} from "@tanstack/react-table";
+    CellContext,
+    ColumnDef,
+    createColumnHelper,
+} from "@tanstack/react-table"
 
 export interface Item {
-	id: number;
-	name: string;
-	price: number;
-	quantity: number;
-	images: string[]; // URLs
-	categories: string[];
-	dateUpdated: Date;
+    id: string
+    name: string
+    description: string
+    price: number
+    count: number
+    category: string
+    images: string[]
 }
 
 export interface Claim {
-	id: number;
-	name: string;
-	dateFiled: Date;
-	items: Item[];
+    id: number
+    name: string
+    dateFiled: Date
+    items: Item[]
+}
+
+export interface UploadSessionResponse {
+    id: string
+    date: Date
+    after: boolean
+    processing: boolean
+    items: Item[]
 }
