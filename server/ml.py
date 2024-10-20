@@ -3,7 +3,7 @@ from torchvision import models, transforms
 from PIL import Image
 # from PIL import Image as PILImage
 from typing import List
-from image_embedding import get_image_vector_embedding
+from image_embedding import get_image_description_vector_embedding
 import hyperbolic
 import stitcher
 from predict import segment, get_unique_filename, show_masks_and_boxes_on_image
@@ -36,8 +36,6 @@ def get_image_data(image, transparent_image):
     - (vectorEmbedding, name, desc, category)
     """
 
-    vector_embedding = get_image_vector_embedding(transparent_image)
-
     results = hyperbolic.process_images([transparent_image])
     if not results:
         return None
@@ -48,6 +46,8 @@ def get_image_data(image, transparent_image):
         desc = result['description'] # PRANAV: get desc
         category = result['category'] # PRANAV: get category
         price = result['price']
+        vector_embedding = get_image_description_vector_embedding(name+": "+desc)
+
         return (vector_embedding, name, desc, category, price)
 
 def get_image_filtered_list_data(images, transparent_images, bboxes: List[List[int]]):

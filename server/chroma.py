@@ -42,7 +42,7 @@ def add_image_vector_to_collection(vector_embedding, url_path, before: bool, sta
 
     # Add the vector embedding along with metadata to the collection
     collection.add(
-        embeddings=[vector_embedding.tolist()],  # Ensure vector_embedding is converted to list
+        embeddings=vector_embedding,  # Ensure vector_embedding is converted to list
         documents=[url_path],  # Typically a document is the reference (e.g., image URL)
         ids=[image_id],  # Use the UUID as the unique identifier
         metadatas=[metadata]  # Add metadata for this entry
@@ -61,7 +61,7 @@ def find_k_nearest_images(vector_embedding, k):
     
     # Query ChromaDB for the nearest vector
     results = collection.query(
-        query_embeddings=[vector_embedding.tolist()],
+        query_embeddings=vector_embedding,
         n_results=k
     )
     return results
@@ -70,7 +70,7 @@ def find_nearest_image(vector_embedding):
     "Return the nearest image to the given embedding"
     return find_k_nearest_images(vector_embedding, k=1)
 
-def get_item_uuid_of_embedding(vector_embedding, distance_threshold=400):
+def get_item_uuid_of_embedding(vector_embedding, distance_threshold=0.5):
     """
     Get the item UUID of an embedding if there's a similar one within the distance threshold,
     otherwise generate a new UUID.
@@ -83,7 +83,8 @@ def get_item_uuid_of_embedding(vector_embedding, distance_threshold=400):
     str: The UUID of the similar embedding or a new UUID.
     """
     # Query for the nearest embedding
-    results = find_k_nearest_images(vector_embedding, k=1)
+    results = find_k_nearest_images(vector_embedding, k=10)
+    print("results: ", results)
     
     if results and 'distances' in results and results['distances']:
         
@@ -95,7 +96,7 @@ def get_item_uuid_of_embedding(vector_embedding, distance_threshold=400):
         
         if nearest_distance <= distance_threshold:
             # Return the item ID of the nearest embedding if it's within the threshold
-            return results['ids'][0][0]
+            return results['metadatas'][0][0]['item_id']
     
     # If no similar embedding found or distance is above threshold, generate a new UUID
     return generate_uuid()

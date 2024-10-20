@@ -182,12 +182,16 @@ def get_pending_uploads():
 ###################
 # Set pending images to done
 def set_status_to_status(old_status, new_status):
-    data = request.json
+    # data = request.json
+
+    print(f"Setting {old_status} images to {new_status} status")
 
     result = filter_images_by_metadata(status=old_status)
     image_ids = result['ids'][0]
     for id in image_ids:
         update_image_status(id, new_status=new_status)
+
+    print(f"Images {image_ids} updated from {old_status} to {new_status} status")
 
     return jsonify({"message": f"Images {image_ids} updated from {old_status} to {new_status} status"}), 200
 
