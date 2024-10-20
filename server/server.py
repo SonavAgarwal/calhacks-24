@@ -1,15 +1,10 @@
 from flask import Flask, request, jsonify
-import sqlite3
 import uuid
 import json
 from datetime import datetime
+from db import get_db_connection
 
 app = Flask(__name__)
-
-def get_db_connection():
-    conn = sqlite3.connect('items.db')
-    conn.row_factory = sqlite3.Row
-    return conn
 
 @app.route('/item', methods=['POST'])
 def create_item():
