@@ -71,4 +71,4 @@ def put_on_blockchain(urls):
 
 
 
-put_on_blockchain(["https://example.com/nft1", "https://example.com/nft2"])
+# put_on_blockchain(["https://example.com/nft1", "https://example.com/nft2"])
