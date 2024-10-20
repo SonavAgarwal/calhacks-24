@@ -16,13 +16,6 @@ def get_items_from_image(image):
     """
     pass
 
-def filter_images(images: list):
-    """
-    removes irrelavant images from list of cropped images
-
-    Returns: filtered list of cropped images
-    """
-    pass
 
 def load_image(img_path: str):
     """
