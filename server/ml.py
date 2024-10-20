@@ -27,7 +27,7 @@ def load_image(img_path: str):
     image = open(img_path).convert('RGB')
     return image
 
-def get_image_data(image: Image):
+def get_image_data(image: Image, transparent_image: Image):
     """
     Given an Image, returns a tuple of all the image data
 
@@ -35,7 +35,7 @@ def get_image_data(image: Image):
     - (vectorEmbedding, name, desc, category)
     """
 
-    vector_embedding = get_image_vector_embedding(image)
+    vector_embedding = get_image_vector_embedding(transparent_image)
 
     results = hyperbolic.process_images([image])
     if not results:
@@ -49,7 +49,7 @@ def get_image_data(image: Image):
         price = result['price']
         return (vector_embedding, name, desc, category, price)
 
-def get_image_filtered_list_data(images: List[Image], bboxes: List[List[int]]):
+def get_image_filtered_list_data(images: List[Image], transparent_images: List[Image], bboxes: List[List[int]]):
     """
     Given a list of images (tensors) returns a list of
     tuples where each tuple contains important data of the image
@@ -61,8 +61,8 @@ def get_image_filtered_list_data(images: List[Image], bboxes: List[List[int]]):
     returns Tuple[vectorEmbedding, name, desc, category]
     """
     res = []
-    for image, bbox in zip(images, bboxes):
-        img_data = get_image_data(image)
+    for image, transparent_image, bbox in zip(images, transparent_images, bboxes):
+        img_data = get_image_data(image, transparent_image)
         if img_data: # only if image data is valid append
             res.append(img_data)
     return res
@@ -83,9 +83,11 @@ def process_video(video_path: str):
     segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image("pano.png", debug=True)
 
     # 3) get image data from the segmented images
-    image_data = get_image_filtered_list_data(segmented_images, segmented_images_bboxes)
+    image_data = get_image_filtered_list_data(segmented_images, transparent_segmented_images, segmented_images_bboxes)
     # 7.1) upload vector embedding + METADATA to chromadb
     # 7.2) upload name, desc, category, price 
+
+    # transparent_segmented_images are the images we'd want to display on frontend
 
     pass
 
