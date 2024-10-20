@@ -1,3 +1,5 @@
 
 *.mov
 predictions/
+__pychache__/
+*.png 

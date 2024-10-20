@@ -14,7 +14,7 @@ def initialize_database():
     conn = open_connection()
     cursor = conn.cursor()
 
-    # Create Items Table
+    # Create Items Table with before_count and after_count
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Items (
             id TEXT PRIMARY KEY,
@@ -22,35 +22,15 @@ def initialize_database():
             description TEXT,
             category TEXT,
             price TEXT,
-            count INTEGER
-        )
-    ''')
-
-    # Create Image Metadata Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Images (
-            id TEXT PRIMARY KEY,
-            item_id TEXT NOT NULL,
-            after BOOLEAN NOT NULL,
-            FOREIGN KEY (item_id) REFERENCES Items (id)
-        )
-    ''')
-
-    # Create Upload Session Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS UploadSession (
-            id TEXT PRIMARY KEY,
-            image_id TEXT NOT NULL,
-            processing BOOLEAN NOT NULL,
-            after BOOLEAN NOT NULL,
-            FOREIGN KEY (image_id) REFERENCES Images (id)
+            before_count INTEGER,
+            after_count INTEGER
         )
     ''')
 
     conn.commit()
     conn.close()
 
-def set_item(name, description, category, price, count, item_id=None):
+def set_item(name, description, category, price, item_id):
     """
     Set or update an item in the Items table.
 
@@ -59,7 +39,6 @@ def set_item(name, description, category, price, count, item_id=None):
         description (str): The description of the item.
         category (str): The category of the item.
         price (str): The price of the item.
-        count (int): The count of the item.
         item_id (str, optional): The UUID of the item. If not provided, a new UUID will be generated.
 
     Returns:
@@ -68,78 +47,23 @@ def set_item(name, description, category, price, count, item_id=None):
     conn = open_connection()
     cursor = conn.cursor()
 
-    if item_id is None:
-        item_id = generate_uuid()
-
     cursor.execute('''
-        INSERT OR REPLACE INTO Items (id, name, description, category, price, count)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (item_id, name, description, category, price, count))
+        INSERT OR REPLACE INTO Items (id, name, description, category, price, before_count, after_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (item_id, name, description, category, price, 1, 0))  # sets before_count to 1 and after_count to 0
 
     conn.commit()
     conn.close()
     return item_id
 
-def set_image(item_id, is_after, image_id=None):
+def increment_item_count(item_id, before=True):
     """
-    Set an image associated with an item in the Images table.
-    
-    Args:
-        item_id (str): The UUID of the item the image is associated with.
-        is_after (bool): Whether the image is an 'after' image (True) or a 'before' image (False).
-        image_id (str, optional): The UUID for the image. If not provided, a new UUID will be generated.
-    
-    Returns:
-        str: The UUID of the image (either the provided one or a newly generated one).
-    """
-    conn = open_connection()
-    cursor = conn.cursor()
-
-    if image_id is None:
-        image_id = generate_uuid()
-
-    cursor.execute('''
-        INSERT OR REPLACE INTO Images (id, item_id, after)
-        VALUES (?, ?, ?)
-    ''', (image_id, item_id, is_after))
-
-    conn.commit()
-    conn.close()
-    return image_id
-
-def add_upload_session(image_ids, after):
-    """
-    Add a new upload session for multiple images.
+    Increment the before_count or after_count of a given item by 1.
 
     Args:
-        image_ids (list): List of image UUIDs to be included in the upload session.
-        after (bool): Whether these are 'after' images (True) or 'before' images (False).
+        item_id (str): The UUID of the item to increment.
+        before (bool, optional): If True, increment before_count, otherwise increment after_count. Defaults to True.
 
-    Returns:
-        str: The UUID of the newly created upload session.
-    """
-    conn = open_connection()
-    cursor = conn.cursor()
-
-    upload_session_id = generate_uuid()
-
-    for image_id in image_ids:
-        cursor.execute('''
-            INSERT INTO UploadSession (id, image_id, processing, after)
-            VALUES (?, ?, ?, ?)
-        ''', (upload_session_id, image_id, True, after))
-
-    conn.commit()
-    conn.close()
-    return upload_session_id
-
-def upload_session_complete(upload_session_id):
-    """
-    Mark a given upload session as complete by setting its processing status to False.
-    
-    Args:
-        upload_session_id (str): The UUID of the upload session to mark as complete.
-    
     Returns:
         bool: True if the update was successful, False otherwise.
     """
@@ -147,21 +71,116 @@ def upload_session_complete(upload_session_id):
     cursor = conn.cursor()
 
     try:
-        cursor.execute('''
-            UPDATE UploadSession
-            SET processing = ?
-            WHERE id = ?
-        ''', (False, upload_session_id))
+        # First, check if the item exists
+        cursor.execute("SELECT before_count, after_count FROM Items WHERE id = ?", (item_id,))
+        result = cursor.fetchone()
 
-        if cursor.rowcount == 0:
-            print(f"No upload session found with id: {upload_session_id}")
+        if result is None:
+            print(f"No item found with id: {item_id}")
             return False
+
+        before_count, after_count = result
+
+        if before:
+            new_count = before_count + 1
+            cursor.execute('''
+                UPDATE Items
+                SET before_count = ?
+                WHERE id = ?
+            ''', (new_count, item_id))
+            print(f"Item before_count updated. New count: {new_count}")
+        else:
+            new_count = after_count + 1
+            cursor.execute('''
+                UPDATE Items
+                SET after_count = ?
+                WHERE id = ?
+            ''', (new_count, item_id))
+            print(f"Item after_count updated. New count: {new_count}")
 
         conn.commit()
         return True
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
         return False
+    finally:
+        conn.close()
+
+def update_item(item_id, name, description, category, price, before=True):
+    """
+    Update an item in the Items table. If the item already exists, increment its before_count or after_count;
+    if not, create a new item with the provided details.
+
+    Args:
+        name (str): The name of the item.
+        description (str): The description of the item.
+        category (str): The category of the item.
+        price (str): The price of the item.
+        item_id (str): The UUID of the item.
+        before (bool, optional): If True, increment before_count, otherwise increment after_count. Defaults to True.
+
+    Returns:
+        str: The UUID of the item.
+    """
+    conn = open_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Check if the item_id already exists
+        cursor.execute("SELECT id FROM Items WHERE id = ?", (item_id,))
+        result = cursor.fetchone()
+
+        if result:
+            # If the item exists, increment the appropriate count
+            print(f"Item with ID {item_id} already exists. Incrementing {'before' if before else 'after'} count.")
+            increment_item_count(item_id, before)
+        else:
+            # If the item doesn't exist, insert it with the provided details
+            print(f"Item with ID {item_id} does not exist. Creating new item.")
+            set_item(name, description, category, price, item_id)
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+    return item_id
+
+def get_item(item_id):
+    """
+    Retrieve an item from the Items table by its UUID.
+
+    Args:
+      item_id (str): The UUID of the item to retrieve.
+
+    Returns:
+      dict: A dictionary containing the item's details, or None if the item does not exist.
+    """
+    conn = open_connection()
+    cursor = conn.cursor()
+
+    print(f"Retrieving item with ID: {item_id}")
+
+    try:
+        cursor.execute("SELECT * FROM Items WHERE id = ?", (item_id,))
+        result = cursor.fetchone()
+
+        if result:
+            item = {
+                'id': result[0],
+                'name': result[1],
+                'description': result[2],
+                'category': result[3],
+                'price': result[4],
+                'before_count': result[5],
+                'after_count': result[6]
+            }
+            return item
+        else:
+            print(f"No item found with id: {item_id}")
+            return None
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return None
     finally:
         conn.close()
 
