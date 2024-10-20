@@ -36,9 +36,17 @@ class Processing:
         """
         pass
 
-    def load_image(img_path):
+    def filter_images(images: list):
         """
-        
+        removes irrelavant images from list of cropped images
+
+        Returns: filtered list of cropped images
+        """
+        pass
+
+    def load_image(img_path: str):
+        """
+        Given a image path returns an Image.
         """
         image = open(img_path).convert('RGB')
         return image
@@ -86,20 +94,24 @@ class Processing:
             price = result['price']
             return (vector_embedding, name, desc, category, price)
 
-    def get_image_list_data(images: List[Image]):
+    def get_image_filtered_list_data(images: List[Image]):
         """
         Given a list of images (tensors) returns a list of
         tuples where each tuple contains important data of the image
+
+        Args:
+        - list of unfiltered images
 
         returns Tuple[vectorEmbedding, name, desc, category]
         """
         res = []
         for image in images:
             img_data = Processing.get_image_data(image)
-            res.append(img_data)
+            if img_data: # only if image data is valid append
+                res.append(img_data)
         return res
 
-    def process_video(video):
+    def process_video(video_path: str):
         """
         Args
         - video: a video file of a room
@@ -107,4 +119,19 @@ class Processing:
         Return
         - String: response of successful video upload
         """
+
+        # 1) load video from video_path
+
+        # 2) convert video to panoramic
+
+        # 3) YOLO panoramic
+
+        # 4) use YOLO to run SAM on img
+
+        # 5) filter out bad imgs with Hyperbolic
+
+        # 6) get data of all the filtered images
+
+        # 7.1) upload
+
         pass
