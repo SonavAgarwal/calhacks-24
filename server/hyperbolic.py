@@ -29,12 +29,12 @@ def get_item_details_from_image(image):
     # Prepare the message content
     message_content = [
         {"type": "text", "text": """
-        List the following details for the item highlighted by the red outline in this image:
-        {"name": <string>, "description": <string>, "category": <string>, "price": <float>, "is_object": <bool>}.
-        category can be one of the following: Electronics, Appliances, Furniture, Kitchenware, Containers, Clothing and Accessories, Artwork and Antiques, Toiletry, Tools and Equipment, Toys and Games, Home Decor, Bedding and Linens, Kitchenware, Hobby and Craft Supplies, Media and Collectibles, Medical Equipment, Pet Supplies, Food, Firearms
-        is_object should be true for recognizable objects/furniture, false for walls, people, and unrecognizable things. You are checking if the thing highlighted by the outline is_object, NOT other objects in the image.
+        List the following details for the item outlined by a thin red line in this image:
+        {"name": <string>, "description": <string>, "category": <string>, "price": <float>, "is_object": <int>}.
+        category can be one of the following: Electronics, Appliances, Furniture, Kitchenware, Containers, Clothing and Accessories, Toiletry, Tools and Equipment, Toys and Games, Home Decor, Bedding and Linens, Kitchenware, Hobby and Craft Supplies, Medical Equipment, Pet Supplies, Food, Firearms
+        is_object should be 1 for recognizable non-human objects/furniture. is_object should be 0 for walls, people, persons, humans, men, women and unrecognizable things. If you are at all unsure about what is outlined in red, say it is unrecognizable and set is_object to 0. You are checking if the thing highlighted by the outline is_object, NOT other objects in the image.
         price is the estimated dollar value of the object.
-        json output should be one dict like the following example {"name": <string>, "description": <string>, "category": <string>, , "price": <float>, "is_object": <bool>}
+        json output should be one dict like the following example {"name": <string>, "description": <string>, "category": <string>, , "price": <float>, "is_object": <int>}
         Start JSON output here:
         """},
         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"}}
@@ -50,7 +50,7 @@ def get_item_details_from_image(image):
         "model": "Qwen/Qwen2-VL-7B-Instruct",
         "max_tokens": 32000,
         "temperature": 0.7,
-        "top_p": 0.9,
+        "top_p": 0.9
     }
 
     # Make the API request
@@ -70,15 +70,24 @@ def process_images(images):
     
     for image in images:
         print("Processing image...")
+        retries = 3
+        while retries > 0:
+            try:
+              item_details = get_item_details_from_image(image)
+              if item_details:
+                  item_json = json.loads(item_details)
 
-        item_details = get_item_details_from_image(image)
-        if item_details:
-            # Parse the JSON response
-            item_json = json.loads(item_details)
-            
-            # Filter out items that are not objects
-            if item_json.get("is_object", False):
+              if any(e in item_details.lower() for e in ["unrecognizable", "person","man","woman","human"]):
+                break
+              if item_json.get("is_object", False):
                 items.append(item_json)
+              break
+            except Exception as e:
+              print(f"Error processing image: {e}")
+              print(item_details)
+              retries -= 1
+              if retries == 0:
+                  print("Failed to process image after 3 attempts.")
     
     return items
 

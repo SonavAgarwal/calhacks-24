@@ -86,7 +86,7 @@ def segment_image(raw_image, bboxes, model, processor, device):
   masks = processor.image_processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu())
   return masks[0]
 
-def segment(img_path, debug=False, padding_ratio=0.2):
+def segment(img_path, debug=False, padding=10):
   """
   Segment objects in an image and return segmented images with masks outlined.
   """
@@ -98,63 +98,82 @@ def segment(img_path, debug=False, padding_ratio=0.2):
   raw_image, bboxes = detect_objects(img_path, yolo_model)
   masks = segment_image(raw_image, bboxes, model, processor, device)
   if debug:
-    save_masked_path = get_unique_filename("./predictions/masked_image.png")
-    save_boxes_path = get_unique_filename("./predictions/boxes_image.png")
-
-  show_masks_and_boxes_on_image(raw_image, [], bboxes, save_boxes_path)
-  show_masks_and_boxes_on_image(raw_image, masks, [], save_masked_path)
+    if not os.path.exists("./images"):
+        os.makedirs("./images")
+    save_boxes_path = get_unique_filename("./images/boxes_image.png") 
+    show_masks_and_boxes_on_image(raw_image, [], bboxes, save_boxes_path)
+    save_masked_path = get_unique_filename("./images/masked_image.png")
+    show_masks_and_boxes_on_image(raw_image, masks, [], save_masked_path)
 
   segmented_images = []
-
+  segmented_images_bboxes = []
+  transparent_segmented_images = []
+  
   # Loop over the masks and create cropped images with masks outlined
   for i, mask in enumerate(masks):
-    mask_np = np.array(mask).squeeze()  # Ensure mask is 2D by removing extra dimensions if present
+      mask_np = np.array(mask).squeeze()  # Ensure mask is 2D by removing extra dimensions if present
 
-    # Find the bounding box for the mask by getting min/max coordinates where the mask is present
-    y_indices, x_indices = np.where(mask_np > 0)  # Ensure mask is binary
-    if len(y_indices) == 0 or len(x_indices) == 0:
-      continue  # Skip if mask is empty
+      # Find the bounding box for the mask by getting min/max coordinates where the mask is present
+      y_indices, x_indices = np.where(mask_np > 0)  # Ensure mask is binary
+      if len(y_indices) == 0 or len(x_indices) == 0:
+        continue  # Skip if mask is empty
 
-    x_min, x_max = np.min(x_indices), np.max(x_indices)
-    y_min, y_max = np.min(y_indices), np.max(y_indices)
+      x_min, x_max = np.min(x_indices), np.max(x_indices)
+      y_min, y_max = np.min(y_indices), np.max(y_indices)
 
-    # Create a square bounding box around the mask
-    bbox_size = max(x_max - x_min, y_max - y_min)
+      # Create a square bounding box around the mask
+      bbox_width = x_max - x_min
+      bbox_height = y_max - y_min
+      bbox_size = max(bbox_width, bbox_height)
 
-    # Add padding to include more context around the mask
-    padding = int(bbox_size * padding_ratio)
-    x_min = max(0, x_min - padding)
-    y_min = max(0, y_min - padding)
-    x_max = min(raw_image.width, x_max + padding)
-    y_max = min(raw_image.height, y_max + padding)
+      # Skip masks that are smaller than 50 by 50 pixels
+      if bbox_size < 50:
+        continue
 
-    # Crop the image around the padded bounding box
-    cropped_image = raw_image.crop((x_min, y_min, x_max, y_max))
+      # Add padding to include more context around the mask
+      padded_size = bbox_size + padding
+      x_center = (x_min + x_max) // 2
+      y_center = (y_min + y_max) // 2
 
-    # Convert the cropped image to a format that can be edited with PIL
-    cropped_image_np = np.array(cropped_image)
-    img_with_outline = Image.fromarray(cropped_image_np)
+      # Ensure the bounding box is square and centered
+      half_size = padded_size // 2
+      x_min = max(0, x_center - half_size)
+      y_min = max(0, y_center - half_size)
+      x_max = min(raw_image.width, x_center + half_size)
+      y_max = min(raw_image.height, y_center + half_size)
 
-    # Convert mask to 1-pixel outline using a simple dilation trick
-    mask_cropped = mask_np[y_min:y_max, x_min:x_max]
-    outline = np.zeros_like(mask_cropped)
+      # Crop the image around the padded bounding box
+      cropped_image = raw_image.crop((x_min, y_min, x_max, y_max))
 
-    # Create an outline by checking neighbors
-    for y, x in zip(*np.where(mask_cropped > 0)):
-      if (y > 0 and mask_cropped[y-1, x] == 0) or \
-         (y < mask_cropped.shape[0] - 1 and mask_cropped[y+1, x] == 0) or \
-         (x > 0 and mask_cropped[y, x-1] == 0) or \
-         (x < mask_cropped.shape[1] - 1 and mask_cropped[y, x+1] == 0):
-        outline[y, x] = 1  # Mark the boundary
+      # Convert the cropped image to a format that can be edited with PIL
+      cropped_image_np = np.array(cropped_image)
+      img_with_outline = Image.fromarray(cropped_image_np)
 
-    # Draw the outline on the cropped image in red
-    draw = ImageDraw.Draw(img_with_outline)
-    for y, x in zip(*np.where(outline > 0)):
-      draw.point((x, y), fill="red")
+      segmented_images.append(img_with_outline)
+      segmented_images_bboxes.append([x_min, y_min, x_max, y_max])
 
-    segmented_images.append(img_with_outline)
+      # Create transparent segmented image
+      transparent_img = Image.new("RGBA", cropped_image.size)
+      cropped_image_rgba = cropped_image.convert("RGBA")
+      mask_cropped = mask_np[y_min:y_max, x_min:x_max]
+      mask_rgba = Image.fromarray((mask_cropped * 255).astype(np.uint8)).convert("L")
+      transparent_img.paste(cropped_image_rgba, (0, 0), mask_rgba)
+      transparent_segmented_images.append(transparent_img)
+  
+  if debug:
+      # Save the segmented images with masks outlined
+      for i, img in enumerate(segmented_images):
+          if not os.path.exists("./images/segments"): 
+              os.makedirs("./images/segments")
+          img.save(f"./images/segments/segmented_{i}.png")
 
-  return segmented_images
+      # Save the transparent segmented images
+      for i, img in enumerate(transparent_segmented_images):
+          if not os.path.exists("./images/transparent_segments"): 
+              os.makedirs("./images/transparent_segments")
+          img.save(f"./images/transparent_segments/transparent_segmented_{i}.png")
+
+  return segmented_images, segmented_images_bboxes, transparent_segmented_images
 
 # # Example usage:
 # img_path = "./images/pano.jpg"
