@@ -13,22 +13,23 @@ client = chromadb.HttpClient(host='18.225.156.100', port=8000)
 # Create or get a collection
 collection = client.create_collection("image_vectors")
 
-def add_image_vector_to_collection(vector_embedding, item_id, url_path, before: bool, status: str):
+def add_image_vector_to_collection(vector_embedding, url_path, before: bool, status: str):
     """
     Add a vector embedding along with metadata to the ChromaDB collection.
     
     Args:
         vector_embedding (np.ndarray): The vector embedding of the image.
-        item_id (str): The UUID of the associated item.
         url_path (str): The URL path of the image.
         before (bool): A flag indicating if it's a 'before' image.
         status (str): The status of the image (e.g., 'processed', 'pending').
     
     Return:
-        the image_id of the new vector embedding
+        image_id: image_id of the new uploaded image
+        item_id: id of the item associated with image
     """
 
-    image_id = get_uuid_of_embedding(vector_embedding)
+    image_id = generate_uuid()
+    item_id = get_item_uuid_of_embedding(vector_embedding)
 
     metadata = {
         "image_id": image_id,
@@ -42,12 +43,12 @@ def add_image_vector_to_collection(vector_embedding, item_id, url_path, before: 
     collection.add(
         embeddings=[vector_embedding.tolist()],  # Ensure vector_embedding is converted to list
         documents=[url_path],  # Typically a document is the reference (e.g., image URL)
-        ids=[item_id],  # Use the UUID as the unique identifier
+        ids=[image_id],  # Use the UUID as the unique identifier
         metadatas=[metadata]  # Add metadata for this entry
     )
 
     print(f"Added image with item_id {item_id} and URL {url_path} to the collection.")
-    return image_id
+    return image_id, item_id
 
 
 def find_k_nearest_images(vector_embedding, k):
@@ -67,9 +68,9 @@ def find_nearest_image(vector_embedding):
     "Return the nearest image to the given embedding"
     return find_k_nearest_images(vector_embedding, k=1)
 
-def get_uuid_of_embedding(vector_embedding, distance_threshold=500):
+def get_item_uuid_of_embedding(vector_embedding, distance_threshold=500):
     """
-    Get the UUID of an embedding if there's a similar one within the distance threshold,
+    Get the item UUID of an embedding if there's a similar one within the distance threshold,
     otherwise generate a new UUID.
     
     Args:
@@ -86,8 +87,8 @@ def get_uuid_of_embedding(vector_embedding, distance_threshold=500):
         nearest_distance = results['distances'][0]  # Assuming 'distances' is a list of lists, take the first element
         
         if nearest_distance <= distance_threshold:
-            # Return the ID of the nearest embedding if it's within the threshold
-            return results['ids'][0] 
+            # Return the item ID of the nearest embedding if it's within the threshold
+            return results['item_id'] 
     
     # If no similar embedding found or distance is above threshold, generate a new UUID
     return generate_uuid()
