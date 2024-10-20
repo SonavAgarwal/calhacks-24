@@ -9,6 +9,10 @@ print(f"Using device: {device}")
 
 # Load pre-trained ResNet50 model
 embedding_model = models.resnet50(pretrained=True)
+
+EMBEDDING_DIM_SIZE = embedding_model.fc.in_features
+print('EMBEDDING_DIM_SIZE', EMBEDDING_DIM_SIZE)
+
 embedding_model = torch.nn.Sequential(*list(embedding_model.children())[:-1])  # Remove the last fully connected layer
 embedding_model = embedding_model.to(device)
 embedding_model.eval()

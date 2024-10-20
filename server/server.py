@@ -73,12 +73,16 @@ def upload_media():
 def get_items():
     # do something to get inventory
 
-    # check category query parameter
-    category = request.args.get('category')
+    # metadata to filter by
+    item_id = None
+    url_path = None
+    before = request.args.get('before')
     status = request.args.get('status')
-    if category:
-        # filter inventory by category
-        pass
+
+    filtered_images = filter_images_by_metadata(item_id, url_path, before, status)
+
+    for image in filtered_images:
+        print(image)
 
     # returns all the items in the inventory, joined with their images
     return jsonify({"message": "Inventory fetched successfully"}), 200

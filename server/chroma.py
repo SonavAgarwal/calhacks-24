@@ -2,6 +2,7 @@ from PIL import Image
 import chromadb
 import numpy as np
 import uuid
+from image_embedding import EMBEDDING_DIM_SIZE
 
 def generate_uuid():
     """Generate a new UUID."""
@@ -11,7 +12,7 @@ def generate_uuid():
 client = chromadb.HttpClient(host='18.225.156.100', port=8000)
 
 # Create or get a collection
-collection = client.create_collection("image_vectors")
+collection = client.create_collection("image_vectors", get_or_create=True)
 
 def add_image_vector_to_collection(vector_embedding, url_path, before: bool, status: str):
     """
@@ -121,7 +122,7 @@ def filter_images_by_metadata(item_id=None, url_path=None, before=None, status=N
 
     # Perform the query with the constructed filter
     results = collection.query(
-        query_embeddings=[],  # Empty because we are only filtering by metadata, not by vector
+        query_embeddings=[0]*EMBEDDING_DIM_SIZE,  # Empty because we are only filtering by metadata, not by vector
         where=filter_conditions,  # Apply the filter conditions
         n_results=num_results  # Set to a reasonable number; adjust based on your needs
     )
