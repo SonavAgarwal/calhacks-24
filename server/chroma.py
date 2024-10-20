@@ -30,3 +30,5 @@ def find_k_nearest_images(vector_embedding, k):
     )
     
     return results
+
+def get_uuid_of_embedding():
