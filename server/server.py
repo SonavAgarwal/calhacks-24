@@ -136,15 +136,15 @@ def get_items():
     # returns all the items in the inventory, joined with their images
     return jsonify({"items": items}), 200
 
-@app.route('/make_claim', methods=['POST'])
-def make_claim():
+@app.route('/confirm_matches', methods=['POST'])
+def confirm_matches():
     data = request.json
     item_ids = data.get('item_ids', [])
 
     if not item_ids:
         return jsonify({"error": "No item IDs provided"}), 400
 
-    claimed_images = []
+    matched_images = []
 
     # For each item to claim
     for item_id in item_ids:
@@ -153,13 +153,13 @@ def make_claim():
         if images and 'ids' in images:
             image_ids = images['ids'][0]
             for image_id in image_ids:
-                update_image_status(image_id, new_status='claimed')        
-                claimed_images.append(image_id)
+                update_image_status(image_id, new_status='matched')        
+                matched_images.append(image_id)
 
     return jsonify({
         "message": "Claim processed successfully. Image statuses updated to 'claimed'",
         "claimed_items": item_ids,
-        "removed_images": claimed_images
+        "matched_images": matched_images
     }), 200
 
 
@@ -185,7 +185,7 @@ def set_status_to_status(old_status, new_status):
     data = request.json
 
     result = filter_images_by_metadata(status=old_status)
-    image_ids = result['ids'] 
+    image_ids = result['ids'][0]
     for id in image_ids:
         update_image_status(id, new_status=new_status)
 

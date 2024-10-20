@@ -34,8 +34,8 @@ export default function ImageDialog({
         >
             {enlargedImage && (
                 <img
-                    src={enlargedImage.url}
-                    alt={enlargedImage.id}
+                    src={enlargedImage.url_path}
+                    alt={enlargedImage.image_id}
                     className="max-h-full max-w-full"
                 />
             )}
