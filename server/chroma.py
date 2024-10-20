@@ -3,7 +3,7 @@ import chromadb
 import numpy as np
 import uuid
 from image_embedding import EMBEDDING_DIM_SIZE
-
+import blockchain
 def generate_uuid():
     """Generate a new UUID."""
     return str(uuid.uuid4())
@@ -47,6 +47,8 @@ def add_image_vector_to_collection(vector_embedding, url_path, before: bool, sta
         ids=[image_id],  # Use the UUID as the unique identifier
         metadatas=[metadata]  # Add metadata for this entry
     )
+    # put on blockchain
+    blockchain.put_on_blockchain([url_path])
 
     print(f"Added image with item_id {item_id} and URL {url_path} to the collection.")
     return image_id, item_id
