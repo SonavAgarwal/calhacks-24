@@ -2,9 +2,8 @@
 
 import ImageDialog from "@/components/ImageDialog"
 import { ItemsTable } from "@/components/items-table"
-import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog"
 import { Checkbox } from "@/components/ui/checkbox"
-import { PLACEHOLDER_ITEMS } from "@/lib/data"
+import { fixBoolean } from "@/lib/misc"
 import { Image, Item, UploadSessionResponse } from "@/lib/types"
 import {
     CellContext,
@@ -12,16 +11,15 @@ import {
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import { useParams, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { twMerge } from "tailwind-merge"
 
 interface Props {}
 
 const page = (props: Props) => {
-    const { uploadId } = useParams()
-
     const before = useSearchParams().get("before") === "true"
+    const router = useRouter()
 
     const [loading, setLoading] = useState(true)
     const processing = useRef(true)
@@ -49,10 +47,11 @@ const page = (props: Props) => {
             {
                 accessorKey: "price",
                 header: "Price",
-                accessorFn: (originalRow) => `$${originalRow.price.toFixed(2)}`,
+                accessorFn: (originalRow) =>
+                    `$${parseFloat(originalRow.price).toFixed(2)}`,
             },
             {
-                accessorKey: "count",
+                accessorKey: "before_count",
                 header: "Count",
             },
             {
@@ -65,8 +64,8 @@ const page = (props: Props) => {
                             .map((image, index) => (
                                 <img
                                     onClick={() => setEnlargedImage(image)}
-                                    key={image.id}
-                                    src={image.url}
+                                    key={image.image_id}
+                                    src={image.url_path}
                                     alt={info.row.original.name}
                                     className={twMerge(
                                         "h-10 w-10 rounded-md border-2 border-white object-cover",
@@ -109,21 +108,27 @@ const page = (props: Props) => {
             console.log("filtering")
             // only show rows that have an image with status pending
             data = data.filter((item) =>
-                item.images.some((image) => image.status === "pending"),
+                item.images.some(
+                    (image) =>
+                        image.status === "pending" && fixBoolean(image.before),
+                ),
             )
 
             // only show images with status pending
-            data.forEach((item) => {
-                item.images = item.images.filter(
-                    (image) => image.status === "pending",
-                )
-            })
+            // data.forEach((item) => {
+            //     item.images = item.images.filter(
+            //         (image) => image.status === "pending",
+            //     )
+            // })
         } else {
             // only show rows that have an image with status pending and before is false
-            data = data.filter((item) =>
-                item.images.some(
-                    (image) => image.status === "pending" && !image.before,
-                ),
+            data = data.filter(
+                (item) =>
+                    item.images.some(
+                        (image) =>
+                            image.status === "pending" &&
+                            !fixBoolean(image.before),
+                    ) && item.images.some((image) => fixBoolean(image.before)),
             )
 
             // // only show images with status pending and before is false
@@ -156,54 +161,104 @@ const page = (props: Props) => {
         // if not, show error
 
         function fetchData() {
-            // fetch(`https://example.com/upload/${uploadId}`)
-            //     .then((response) => response.json())
-            //     .then((data) => {
-            //         setLoading(false)
-            //         processing.current = data.processing
-            //     })
-            //     .catch((error) => {
-            //         console.error("Error fetching data")
-            //     })
+            fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/inventory`, {
+                headers: {
+                    "ngrok-skip-browser-warning": "true",
+                },
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    setLoading(false)
+                    processing.current = data.processing
+                    setResponse(data)
+                    console.log("data", data)
+                })
+                .catch((error) => {
+                    console.error("Error fetching data", error)
+                })
 
             setLoading(false)
 
-            setTimeout(() => {
-                processing.current = false
-                setLoading(false)
-                setResponse({
-                    id: "123",
-                    date: new Date(),
-                    after: false,
-                    processing: false,
-                    items: PLACEHOLDER_ITEMS,
-                })
-                console.log("response", response)
-            }, 100)
+            // setTimeout(() => {
+            //     processing.current = false
+            //     setLoading(false)
+            //     setResponse({
+            //         id: "123",
+            //         date: new Date(),
+            //         after: false,
+            //         processing: false,
+            //         items: PLACEHOLDER_ITEMS,
+            //     })
+            //     console.log("response", response)
+            // }, 100)
         }
 
         fetchData()
 
         // return () => clearInterval(interval)
-    }, [uploadId])
+    }, [])
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         const selectedRows = table.getSelectedRowModel().rows
 
         if (before) {
             // add to inventory
             console.log("Adding to inventory", selectedRows)
-        } else {
-            // claim items
-            console.log("Claiming items", selectedRows)
-            // store in local storage
-            localStorage.setItem(
-                "claimedItems",
-                JSON.stringify(selectedRows.map((row) => row.original)),
+
+            const image_ids_from_rows = selectedRows.map((row) =>
+                row.original.images.map((image) => image.image_id),
             )
 
-            // open /pdf in a new tab
-            window.open("/pdf", "_blank")
+            console.log("image_ids_from_rows", image_ids_from_rows)
+
+            const image_ids = image_ids_from_rows.flat()
+            console.log("image_ids", image_ids)
+
+            const res2 = await fetch(
+                `${process.env.NEXT_PUBLIC_BASE_URL}/accept_to_inventory`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "ngrok-skip-browser-warning": "true",
+                    },
+                    body: JSON.stringify({
+                        image_ids: image_ids,
+                    }),
+                },
+            )
+
+            if (res2.ok) {
+                console.log("Items added to inventory")
+
+                // fetch(
+                //     `${process.env.NEXT_PUBLIC_BASE_URL}/set_pending_to_done`,
+                //     {
+                //         headers: {
+                //             "ngrok-skip-browser-warning": "true",
+                //         },
+                //     },
+                // )
+
+                // show success message
+                router.push("/")
+            } else {
+                console.error("Error adding items to inventory")
+            }
+        } else {
+            // confirm matches
+            console.log("Confirming matches", selectedRows)
+
+            // // claim items
+            // console.log("Claiming items", selectedRows)
+            // // store in local storage
+            // localStorage.setItem(
+            //     "claimedItems",
+            //     JSON.stringify(selectedRows.map((row) => row.original)),
+            // )
+
+            // // open /pdf in a new tab
+            // window.open("/pdf", "_blank")
         }
     }
 
@@ -249,12 +304,12 @@ const page = (props: Props) => {
                 <div className="flex w-full flex-row gap-4">
                     <div className="flex-1">
                         <h1 className="w-full text-2xl font-bold">
-                            We found {items?.length} items!
+                            We found {items?.length} items.
                         </h1>
                         <p className="w-full text-base">
                             {before
                                 ? "Select the ones you want to add to your inventory."
-                                : "Select the ones you want to claim."}
+                                : "Confirm the matched objects below."}
                         </p>
                     </div>
                     <div className="flex flex-col gap-4">
@@ -265,7 +320,7 @@ const page = (props: Props) => {
                             }
                             onClick={handleContinue}
                         >
-                            {before ? "Add to Inventory" : "Claim Items"}
+                            {before ? "Add to Inventory" : "Confirm Matches"}
                         </button>
                     </div>
                 </div>

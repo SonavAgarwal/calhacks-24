@@ -119,7 +119,9 @@ const MyDocument = () => {
                                 {item.description}
                             </Text>
                             <Text style={styles.tableCell}>{2024}</Text>
-                            <Text style={styles.tableCell}>{item.count}</Text>
+                            <Text style={styles.tableCell}>
+                                {item.before_count}
+                            </Text>
                             <Text style={styles.tableCell}>{item.price}</Text>
                             <Text style={styles.tableCell}>{item.price}</Text>
                             <Text

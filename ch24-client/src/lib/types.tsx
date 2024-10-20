@@ -8,15 +8,17 @@ export interface Item {
     id: string
     name: string
     description: string
-    price: number
-    count: number
+    price: string
+    before_count: number
     category: string
     images: Image[]
+    // before_images: Image[]
+    // after_images: Image[]
 }
 
 export interface Image {
-    id: string
-    url: string
+    image_id: string
+    url_path: string
     status: "pending" | "inventory" | "rejected"
     before: boolean
 }

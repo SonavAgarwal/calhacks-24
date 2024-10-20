@@ -40,10 +40,13 @@ const page = (props: Props) => {
         })
 
         const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_URL}/upload_media`,
+            `${process.env.NEXT_PUBLIC_BASE_URL}/upload_media?before=${uploadType === "inventory"}`,
             {
                 method: "POST",
                 body: formData,
+                headers: {
+                    "ngrok-skip-browser-warning": "true",
+                },
             },
         )
 
@@ -53,9 +56,7 @@ const page = (props: Props) => {
             console.log(data)
             setLoading(false)
 
-            router.push(
-                `/uploads/${data.uploadId}?before=${uploadType === "inventory"}`,
-            )
+            router.push(`/uploads?before=${uploadType === "inventory"}`)
         } else {
             console.error("Error uploading files")
         }

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table"
 import { Item } from "@/lib/types"
 import { Fragment } from "react"
+import { fixBoolean } from "@/lib/misc"
 
 interface ItemsTableProps<Item> {
     data: Item[]
@@ -82,48 +83,69 @@ export function ItemsTable<Items>({
                                         >
                                             <div className="flex flex-col">
                                                 <div className="flex flex-row justify-center gap-4">
-                                                    {[
-                                                        "inventory",
-                                                        "pending",
-                                                    ].map((status) => {
-                                                        const image =
-                                                            row.original.images?.find(
-                                                                (image) =>
-                                                                    image.status ===
-                                                                        status &&
-                                                                    (status ===
-                                                                    "inventory"
-                                                                        ? image.before
-                                                                        : !image.before),
-                                                            )
-
-                                                        if (!image) {
-                                                            return null
-                                                        }
-
-                                                        return (
+                                                    {/* find an image where status is inventory and before is true */}
+                                                    {row.original.images
+                                                        ?.filter((image) =>
+                                                            // image.status ===
+                                                            //     "inventory"
+                                                            //      &&
+                                                            fixBoolean(
+                                                                image.before,
+                                                            ),
+                                                        )
+                                                        ?.slice(0, 1)
+                                                        ?.map((image) => (
                                                             <div
-                                                                key={image.url}
+                                                                key={
+                                                                    image.url_path
+                                                                }
                                                                 className="flex h-full flex-col items-center gap-2 rounded-lg border bg-white p-4"
                                                             >
                                                                 <img
                                                                     key={
-                                                                        image.url
+                                                                        image.url_path
                                                                     }
                                                                     src={
-                                                                        image.url
+                                                                        image.url_path
                                                                     }
                                                                     className="h-64 flex-1 rounded-lg object-cover"
                                                                 />
                                                                 <h3 className="text-base">
-                                                                    {status ===
-                                                                    "inventory"
-                                                                        ? `Before`
-                                                                        : "After"}
+                                                                    Before
                                                                 </h3>
                                                             </div>
+                                                        ))}
+
+                                                    {/* find an image  where before is false */}
+                                                    {row.original.images
+                                                        ?.filter(
+                                                            (image) =>
+                                                                !fixBoolean(
+                                                                    image.before,
+                                                                ),
                                                         )
-                                                    })}
+                                                        ?.slice(0, 1)
+                                                        ?.map((image) => (
+                                                            <div
+                                                                key={
+                                                                    image.url_path
+                                                                }
+                                                                className="flex h-full flex-col items-center gap-2 rounded-lg border bg-white p-4"
+                                                            >
+                                                                <img
+                                                                    key={
+                                                                        image.url_path
+                                                                    }
+                                                                    src={
+                                                                        image.url_path
+                                                                    }
+                                                                    className="h-64 flex-1 rounded-lg object-cover"
+                                                                />
+                                                                <h3 className="text-base">
+                                                                    After
+                                                                </h3>
+                                                            </div>
+                                                        ))}
                                                 </div>
                                             </div>
                                         </TableCell>
