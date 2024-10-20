@@ -133,38 +133,43 @@ def filter_images_by_metadata(item_id=None, url_path=None, before=None, status=N
     
     return results
 
-# update image status
-def update_image_status(image_id, status):
+def update_image_status(image_id, new_status):
     """
-    Update the status of an image in the ChromaDB collection.
+    Update the status of an image with the given image_id in the ChromaDB collection.
     
     Args:
-        image_id (str): The UUID of the image.
-        status (str): The new status of the image.
-    """
-    collection.update(
-        ids=[image_id],
-        metadatas=[{"status": status}]
-    )
-
-    print(f"Updated status of image with ID {image_id} to '{status}'.")
-
-def delete_images_by_item_id(item_id):
-    """
-    Delete all images associated with a given item ID.
+        image_id (str): The UUID of the image to update.
+        new_status (str): The new status to set for the image.
     
-    Args:
-        item_id (str): The UUID of the item.
+    Returns:
+        bool: True if the update was successful, False otherwise.
     """
-    results = filter_images_by_metadata(item_id=item_id)
-    
-    if 'ids' in results:
-        image_ids = results['ids'][0]
-        
-        if image_ids:
-            collection.delete(ids=image_ids)
-            print(f"Deleted {len(image_ids)} images associated with item ID {item_id}.")
-        else:
-            print(f"No images found for item ID {item_id}.")
-    else:
-        print(f"No images found for item ID {item_id}.")
+    try:
+        # First, we need to get the current metadata for the image
+        results = collection.get(
+            ids=[image_id],
+            include=['metadatas']
+        )
+
+        if not results['metadatas']:
+            print(f"No image found with id: {image_id}")
+            return False
+
+        # Get the current metadata
+        current_metadata = results['metadatas'][0]
+
+        # Update the status in the metadata
+        current_metadata['status'] = new_status
+
+        # Update the image in the collection with the new metadata
+        collection.update(
+            ids=[image_id],
+            metadatas=[current_metadata]
+        )
+
+        print(f"Successfully updated status of image {image_id} to {new_status}")
+        return True
+
+    except Exception as e:
+        print(f"An error occurred while updating image status: {str(e)}")
+        return False

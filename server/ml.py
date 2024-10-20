@@ -112,7 +112,7 @@ def process_video(video: object, s3: object, before=True, status='pending'):
         print(f"Added image with item_id {image_id} to the collection.")
 
         # Update item in SQLite db with image data
-        update_item(item_id, name, desc, category, price)
+        update_item(item_id, name, desc, category, price, before)
     
 
     # filtered_images are the images we want to display on frontend
@@ -166,7 +166,7 @@ def process_image(image, s3: object, before=True, status='pending'):
         print(f"Added image with item_id {image_id} to the collection.")
 
         # Update item in SQLite db with image data
-        update_item(item_id, name, desc, category, price)
+        update_item(item_id, name, desc, category, price, before)
     
 
     # filtered_images are the images we want to display on frontend
