@@ -33,6 +33,9 @@ def hello_world():
 @app.route('/upload_media', methods=['POST'])
 def upload_media():
 
+    # with each new upload session set prev pending to done
+    set_pending_to_done()
+
     print('upload_media')
 
     # Create a new S3 client
@@ -106,10 +109,7 @@ def get_items():
             continue
         item_details = get_item(item_id)
         if item_details and item_details['id'] not in items:
-            item_details['before_images'] = []
-            item_details['after_images'] = []
-            item_details['before_count'] = item_details.get('before_count', 0)
-            item_details['after_count'] = item_details.get('after_count', 0)
+            item_details['images'] = []
             items[item_details['id']] = item_details
 
     print("BEFORE IMAGES ADDED TO ITEMS")
@@ -117,17 +117,12 @@ def get_items():
     for item in items.values():
         print(f"Item: {item}")
 
-    # Now add the images to the items under the 'before_images' or 'after_images' key
+    # Now add the images to the items
     for id, metadata in results:
         print(f"Adding image to item {id}")
         item_obj = items.get(metadata.get('item_id', None), None)
         if item_obj:
-            if metadata.get('before', True):  # Assuming 'before' is True by default
-                item_obj['before_images'].append(metadata)
-                item_obj['before_count'] += 1
-            else:
-                item_obj['after_images'].append(metadata)
-                item_obj['after_count'] += 1
+            item_obj['images'].append(metadata)
 
     print("AFTER IMAGES ADDED TO ITEMS")
     # print out the items
@@ -137,10 +132,38 @@ def get_items():
     # convert the items dict to a list
     items = list(items.values())
 
-    # for id, metadata in results:
-
     # returns all the items in the inventory, joined with their images
     return jsonify({"items": items}), 200
+
+@app.route('/make_claim', methods=['POST'])
+def make_claim():
+    data = request.json
+    item_ids = data.get('item_ids', [])
+
+    if not item_ids:
+        return jsonify({"error": "No item IDs provided"}), 400
+
+    removed_items = []
+    removed_images = []
+
+    for item_id in item_ids:
+        # Remove item from SQLite database
+        if remove_item(item_id):
+            removed_items.append(item_id)
+
+        # Find and remove associated images from ChromaDB
+        images = filter_images_by_metadata(item_id=item_id)
+        if images and 'ids' in images:
+            image_ids = images['ids'][0]
+            for image_id in image_ids:
+                remove_image(image_id)        
+                removed_images.append(image_id)
+
+    return jsonify({
+        "message": "Claim processed successfully",
+        "removed_items": removed_items,
+        "removed_images": removed_images
+    }), 200
 
 
 ###################
@@ -161,17 +184,19 @@ def get_pending_uploads():
 
 ###################
 # Set pending images to done
-
-@app.route('/set_pending_to_done', methods=['POST'])
-def set_pending_to_done():
+def set_status_to_status(old_status, new_status):
     data = request.json
 
-    result = filter_images_by_metadata(status='pending')
+    result = filter_images_by_metadata(status=old_status)
     image_ids = result['ids'] 
     for id in image_ids:
-        update_image_status(id, new_status='done')
+        update_image_status(id, new_status=new_status)
 
-    return jsonify({"message": f"Images {image_ids} updated from 'pending' to 'done' status"}), 200
+    return jsonify({"message": f"Images {image_ids} updated from {old_status} to {new_status} status"}), 200
+
+
+def set_pending_to_done():
+    return set_status_to_status(old_status='pending', new_status='done')
 
 
 

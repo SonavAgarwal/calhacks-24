@@ -184,5 +184,23 @@ def get_item(item_id):
     finally:
         conn.close()
 
+def remove_item(item_id):
+    try:
+        conn = open_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Items WHERE id = ?", (item_id,))
+        conn.commit()
+        if cursor.rowcount > 0:
+            print(f"Item {item_id} removed from SQLite database")
+            return True
+        else:
+            print(f"No item found with id {item_id} in SQLite database")
+            return False
+    except Exception as e:
+        print(f"Error removing item {item_id} from SQLite database: {str(e)}")
+        return False
+    finally:
+        conn.close()
+
 # Initialize the database when this module is imported
 initialize_database()

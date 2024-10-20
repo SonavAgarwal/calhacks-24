@@ -173,3 +173,9 @@ def update_image_status(image_id, new_status):
     except Exception as e:
         print(f"An error occurred while updating image status: {str(e)}")
         return False
+
+def remove_image(image_id):
+    try:
+        collection.delete(ids=[image_id])
+    except Exception as e:
+        print(f"Error removing image {image_id} from ChromaDB: {str(e)}")
