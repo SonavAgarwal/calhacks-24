@@ -1,12 +1,20 @@
 import torch
+print(2)
 from torchvision import models, transforms
-from PIL.Image import Image, open
+print(2)
+
 from typing import List
 from image_embedding import get_image_vector_embedding
+print(2)
 import hyperbolic
+print(2)
 import stitcher
 from predict import segment, get_unique_filename, show_masks_and_boxes_on_image
+print(2)
 import threading
+print(2)
+from PIL.Image import Image, open
+print(2)
 
 def get_items_from_image(img_path: str, debug: bool = False):
     """
@@ -67,7 +75,7 @@ def get_image_filtered_list_data(images: List[Image], bboxes: List[List[int]]):
             res.append(img_data)
     return res
 
-def process_video(video_path: str):
+def process_video(video_path: str, debug=False):
     """
     Args
     - video: a video file of a room
@@ -80,7 +88,7 @@ def process_video(video_path: str):
     stitcher.create_panorama(video_path)
 
     # 2) get items from the image
-    segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image("pano.png", debug=True)
+    segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image("pano.png", debug=debug)
 
     # 3) get image data from the segmented images
     image_data = get_image_filtered_list_data(segmented_images, segmented_images_bboxes)
@@ -89,4 +97,4 @@ def process_video(video_path: str):
 
     pass
 
-process_video("../test3.mov")
+process_video("../test3.mov", debug=True)

@@ -8,8 +8,8 @@ import os
 from transformers import pipeline, SamModel, SamProcessor
 from ultralytics import YOLO
 import supervision as sv
-import cv2
-from torchvision.transforms import ToPILImage
+# import cv2
+# from torchvision.transforms import ToPILImage
 
 def show_mask(mask, ax, random_color=False):
   """
