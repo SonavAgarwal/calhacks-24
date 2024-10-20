@@ -4,8 +4,8 @@ from werkzeug.utils import secure_filename
 import uuid
 import json
 from datetime import datetime
-# from db import get_db_connection
 from flask_cors import CORS
+from chroma import *
 
 from aws import open_s3_client, upload_image_to_s3
 
@@ -67,11 +67,12 @@ def upload_media():
 # Get the inventory
 
 @app.route('/inventory', methods=['GET'])
-def get_inventory():
+def get_items():
     # do something to get inventory
 
     # check category query parameter
     category = request.args.get('category')
+    status = request.args.get('status')
     if category:
         # filter inventory by category
         pass
@@ -86,6 +87,11 @@ def get_inventory():
 @app.route('/pending_uploads', methods=['GET'])
 def get_pending_uploads():
     # do something to get pending uploads
+    filtered_images = filter_images_by_metadata(status='pending')
+
+    pending_items = set()
+    for image in filtered_images:
+        image['']
 
     # TODO: return all the images that are pending upload (not yet in inventory)
     return jsonify({"message": "Pending uploads fetched successfully"}), 200
