@@ -137,5 +137,43 @@ def update_item(item_id, name, description, category, price):
 
     return item_id
 
+def get_item(item_id):
+    """
+    Retrieve an item from the Items table by its UUID.
+
+    Args:
+      item_id (str): The UUID of the item to retrieve.
+
+    Returns:
+      dict: A dictionary containing the item's details, or None if the item does not exist.
+    """
+    conn = open_connection()
+    cursor = conn.cursor()
+
+    print(f"Retrieving item with ID: {item_id}")
+
+    try:
+      cursor.execute("SELECT * FROM Items WHERE id = ?", (item_id,))
+      result = cursor.fetchone()
+
+      if result:
+        item = {
+          'id': result[0],
+          'name': result[1],
+          'description': result[2],
+          'category': result[3],
+          'price': result[4],
+          'count': result[5]
+        }
+        return item
+      else:
+        print(f"No item found with id: {item_id}")
+        return None
+    except sqlite3.Error as e:
+      print(f"An error occurred: {e}")
+      return None
+    finally:
+      conn.close()
+
 # Initialize the database when this module is imported
 initialize_database()

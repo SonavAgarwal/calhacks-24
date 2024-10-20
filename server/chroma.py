@@ -84,6 +84,11 @@ def get_item_uuid_of_embedding(vector_embedding, distance_threshold=500):
     results = find_k_nearest_images(vector_embedding, k=1)
     
     if results and 'distances' in results and results['distances']:
+        
+        if len(results['distances'][0]) == 0:
+            # No similar embedding found
+            return generate_uuid()
+
         nearest_distance = results['distances'][0][0]  # Assuming 'distances' is a list of lists, take the first element
         
         if nearest_distance <= distance_threshold:

@@ -12,6 +12,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from ml import process_image, process_video
 from werkzeug.utils import secure_filename
+from db import *
 
 load_dotenv()
 
@@ -62,7 +63,7 @@ def upload_media():
             uploads = process_video(file, s3)
         else:
             print('processing image', file)
-            uploads= process_image(file, s3)
+            uploads = process_image(file, s3)
         
         uploaded_images += uploads
 
@@ -86,12 +87,54 @@ def get_items():
 
     filtered_images = filter_images_by_metadata(
         item_id, url_path, before, status)
+    
+    # print("Filtered images", filtered_images)
 
-    for image in filtered_images:
-        print(image)
+    ids = filtered_images['ids'][0]
+    metadatas = filtered_images['metadatas'][0]
+
+    results = list(zip(ids, metadatas))
+
+    print("looping through results")
+
+    items = {}
+    for id, metadata in results:
+        print(f"Item ID: {id}, Metadata: {metadata}")
+        # get the item details from the image
+        item_id = metadata.get('item_id')
+        if not item_id:
+            continue
+        item_details = get_item(item_id)
+        if item_details and item_details['id'] not in items:
+            items[item_details['id']] = item_details
+
+
+    print("BEFORE IMAGES ADDED TO ITEMS")
+    # print out the items
+    for item in items.values():
+        print(f"Item: {item}")
+
+    # now add the images to the items under the 'images' key
+    for id, metadata in results:
+        print(f"Adding image to item {id}")
+        item_obj = items.get(metadata.get('item_id', None), None)
+        if item_obj:
+            if 'images' not in item_obj:
+                item_obj['images'] = []
+            item_obj['images'].append(metadata)
+
+    print("AFTER IMAGES ADDED TO ITEMS")
+    # print out the items
+    for item in items.values():
+        print(f"Item: {item}")
+
+    # convert the items dict to a list
+    items = list(items.values())
+
+    # for id, metadata in results:
 
     # returns all the items in the inventory, joined with their images
-    return jsonify({"message": "Inventory fetched successfully"}), 200
+    return jsonify({"items": items}), 200
 
 
 ###################
