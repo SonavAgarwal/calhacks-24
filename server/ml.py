@@ -5,18 +5,19 @@ from typing import List
 from image_embedding import get_image_vector_embedding
 import hyperbolic
 import stitcher
+from predict import segment
 
-def get_items_from_image(image):
+def get_items_from_image(img_path: str):
     """
     Args
-    -   image: idk like a 2D RGB tensor ??
+    -   img_path: path to the image
     
     Returns list of cropped segmented 
-    images of items (also 2D RGB tensors??) 
+    images of items (PIL.Image)
     from a single panoramic image. 
     """
-    pass
-
+    segmented_images = segment(img_path)
+    return segmented_images
 
 def load_image(img_path: str):
     """
