@@ -50,7 +50,9 @@ const page = (props: Props) => {
             console.log(data)
             setLoading(false)
 
-            // router.push(`/uploads/${data.uploadId}`)
+            router.push(
+                `/uploads/${data.uploadId}?before=${uploadType === "inventory"}`,
+            )
         } else {
             console.error("Error uploading files")
         }

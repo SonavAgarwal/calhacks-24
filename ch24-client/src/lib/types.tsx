@@ -11,7 +11,14 @@ export interface Item {
     price: number
     count: number
     category: string
-    images: string[]
+    images: Image[]
+}
+
+export interface Image {
+    id: string
+    url: string
+    status: "pending" | "inventory" | "rejected"
+    before: boolean
 }
 
 export interface Claim {
