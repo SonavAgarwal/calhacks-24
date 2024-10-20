@@ -5,6 +5,10 @@ import requests
 import io
 import json
 from PIL import Image
+from multiprocessing import Pool
+import json
+from functools import partial
+
 
 def encode_image(image):
     """Encodes a PIL image to a base64 string, converting RGBA to RGB if necessary."""
@@ -63,33 +67,48 @@ def get_item_details_from_image(image):
     except KeyError:
         print("Error with API response:", response_json)
         return None
+def process_single_image(image):
+    """Process a single image and return the result along with original index."""
+    print(f"Processing image...")
+    retries = 3
+    while retries > 0:
+        try:
+            item_details = get_item_details_from_image(image)
+            if item_details:
+                item_json = json.loads(item_details)
 
-def process_images(images):
-    """Processes a list of images, filters non-objects, and prints the result."""
-    items = []
-    
-    for image in images:
-        print("Processing image...")
-        retries = 3
-        while retries > 0:
-            try:
-              item_details = get_item_details_from_image(image)
-              if item_details:
-                  item_json = json.loads(item_details)
+            if any(e in item_details.lower() for e in ["unrecognizable", "person", "man", "woman", "human"]):
+                return None
+            if item_json.get("is_object", False):
+                return item_json
+            return None
+        except Exception as e:
+            print(f"Error processing image: {e}")
+            print(item_details)
+            retries -= 1
+            if retries == 0:
+                print("Failed to process image after 3 attempts.")
+                return None
 
-              if any(e in item_details.lower() for e in ["unrecognizable", "person","man","woman","human"]):
-                break
-              if item_json.get("is_object", False):
-                items.append(item_json)
-              break
-            except Exception as e:
-              print(f"Error processing image: {e}")
-              print(item_details)
-              retries -= 1
-              if retries == 0:
-                  print("Failed to process image after 3 attempts.")
-    
+def process_images(images, num_workers=None):
+    """Processes a list of images in parallel while maintaining order."""
+    if not images:
+        return []
+
+    # If num_workers is not specified, use CPU count or len(images), whichever is smaller
+    if num_workers is None:
+        from multiprocessing import cpu_count
+        num_workers = min(cpu_count(), len(images))
+
+    # Create a pool of workers
+    with Pool(processes=num_workers) as pool:
+        # Process all images in parallel
+        results = pool.map(process_single_image, images)
+
+    # Filter out None results while maintaining order
+    items = [item for item in results if item is not None]
     return items
+
 
 def load_images_from_files(file_paths):
     """Loads images from a list of file paths and returns a list of PIL Image objects."""
