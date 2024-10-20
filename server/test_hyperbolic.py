@@ -30,10 +30,11 @@ def get_item_details_from_image(image):
     message_content = [
         {"type": "text", "text": """
         List the following details for the item in this image:
-        {"name": <string>, "description": <string>, "category": <string>, "is_object": <bool>}.
+        {"name": <string>, "description": <string>, "category": <string>, "price": <float>, "is_object": <bool>}.
         category can be one of the following: Electronics, Appliances, Furniture, Kitchenware, Containers, Clothing and Accessories, Artwork and Antiques, Toiletry, Tools and Equipment, Toys and Games, Home Decor, Bedding and Linens, Kitchenware, Hobby and Craft Supplies, Media and Collectibles, Medical Equipment, Pet Supplies, Food, Firearms
         is_object should be true for recognizable objects/furniture, false for walls, people, and unrecognizable things.
-        json output should be one dict like the following example {"name": <string>, "description": <string>, "category": <string>, "is_object": <bool>}
+        price is the estimated dollar value of the object.
+        json output should be one dict like the following example {"name": <string>, "description": <string>, "category": <string>, , "price": <float>, "is_object": <bool>}
         Start JSON output here:
         """},
         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"}}
@@ -111,4 +112,5 @@ for item in filtered_items:
     print(f"Name: {item['name']}")
     print(f"Description: {item['description']}")
     print(f"Category: {item['category']}")
+    print(f"Price: {item['price']}")
     print("-" * 30)
