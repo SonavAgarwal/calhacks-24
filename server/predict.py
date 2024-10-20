@@ -59,12 +59,13 @@ def show_masks_and_boxes_on_image(raw_image, masks, bboxes, save_path):
   plt.close()
   gc.collect()
 
-def detect_objects(img_path, yolo_model):
+def detect_objects(image: Image, yolo_model):
   """
   Detect objects in an image using YOLO model and return the image and bounding boxes.
   """
-  raw_image = Image.open(img_path).convert("RGB")
-  results = yolo_model(img_path, conf=0.01)[0]
+  raw_image = image.convert("RGB")
+  img_array = np.array(raw_image)
+  results = yolo_model(img_array, conf=0.01)[0]
   results = sv.Detections.from_ultralytics(results).with_nms(threshold=0.05, class_agnostic=True)
   bboxes = [result[0].tolist() for result in results]
   return raw_image, bboxes
@@ -86,7 +87,7 @@ def segment_image(raw_image, bboxes, model, processor, device):
   masks = processor.image_processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu())
   return masks[0]
 
-def segment(img_path, debug=False, padding=10):
+def segment(image: Image, debug=False, padding=10):
   """
   Segment objects in an image and return segmented images with masks outlined.
   """
@@ -95,7 +96,7 @@ def segment(img_path, debug=False, padding=10):
   model = SamModel.from_pretrained("facebook/sam-vit-huge").to(device)
   processor = SamProcessor.from_pretrained("facebook/sam-vit-huge")
 
-  raw_image, bboxes = detect_objects(img_path, yolo_model)
+  raw_image, bboxes = detect_objects(image, yolo_model)
   masks = segment_image(raw_image, bboxes, model, processor, device)
   if debug:
     if not os.path.exists("./images"):
@@ -174,11 +175,3 @@ def segment(img_path, debug=False, padding=10):
           img.save(f"./images/transparent_segments/transparent_segmented_{i}.png")
 
   return segmented_images, segmented_images_bboxes, transparent_segmented_images
-
-# # Example usage:
-# img_path = "./images/pano.jpg"
-# segmented_images = segment(img_path, debug=True)
-# if not os.path.exists("./predictions/segments"): 
-#     os.makedirs("./predictions/segments")
-# for i, img in enumerate(segmented_images):
-#     img.save(f"./predictions/segments/segmented_{i}.png")
