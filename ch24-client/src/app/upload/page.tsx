@@ -25,33 +25,32 @@ const page = (props: Props) => {
     const [loading, setLoading] = useState(false)
 
     const handleUpload = async () => {
-        // fetch example.com/upload with files, query param after is true if claims, false if inventory
+        // fetch localhost 5000/upload_image with files, query param after is true if claims, false if inventory
         // if successful, navigate to uploads/response.uploadId
         // if not, show error
         setLoading(true)
-        setTimeout(() => {
-            router.push(`/uploads/meow`)
-        }, 1000)
-        return
+        // setTimeout(() => {
+        //     router.push(`/uploads/meow`)
+        // }, 1000)
+        // return
 
         const formData = new FormData()
         files.forEach((file) => {
-            formData.append("files", file)
+            formData.append("files[]", file)
         })
 
-        const response = await fetch(
-            `https://example.com/upload?isClaims=${uploadType === "claims"}`,
-            {
-                method: "POST",
-                body: formData,
-            },
-        )
+        const response = await fetch("http://localhost:5000/upload_images", {
+            method: "POST",
+            body: formData,
+        })
 
         if (response.ok) {
             const data = await response.json()
             // navigate to uploads/response.uploadId
+            console.log(data)
+            setLoading(false)
 
-            router.push(`/uploads/${data.uploadId}`)
+            // router.push(`/uploads/${data.uploadId}`)
         } else {
             console.error("Error uploading files")
         }
