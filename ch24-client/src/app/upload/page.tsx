@@ -39,10 +39,13 @@ const page = (props: Props) => {
             formData.append("files[]", file)
         })
 
-        const response = await fetch("http://localhost:5003/upload_media", {
-            method: "POST",
-            body: formData,
-        })
+        const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BASE_URL}/upload_media`,
+            {
+                method: "POST",
+                body: formData,
+            },
+        )
 
         if (response.ok) {
             const data = await response.json()
