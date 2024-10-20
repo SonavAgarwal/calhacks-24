@@ -62,12 +62,10 @@ def detect_objects(image: Image, yolo_model):
     """
     Detect objects in an image using YOLO model and return the image and bounding boxes.
     """
-    raw_image = image.convert("RGB")
-    img_array = np.array(raw_image)
-    results = yolo_model(img_array, conf=0.01)[0]
+    results = yolo_model(image, conf=0.01)[0]
     results = sv.Detections.from_ultralytics(results).with_nms(threshold=0.05, class_agnostic=True)
     bboxes = [result[0].tolist() for result in results]
-    return raw_image, bboxes
+    return image, bboxes
 
 def segment_image(raw_image, bboxes, model, processor, device):
     """
@@ -90,6 +88,7 @@ def segment(image: Image, debug=False, padding=10):
     """
     Segment objects in an image and return segmented images with masks outlined.
     """
+    image = Image.fromarray(image)
     yolo_model = YOLO("yolov8n.pt")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SamModel.from_pretrained("facebook/sam-vit-huge").to(device)

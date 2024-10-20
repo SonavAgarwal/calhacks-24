@@ -37,6 +37,7 @@ def get_image_vector_embedding(image: Image):
         - vector embedding tensor
         """
         # Load and preprocess the image
+        image = image.convert('RGB')
         img_tensor = preprocess(image)
         img_tensor = img_tensor.unsqueeze(0).to(device)  # Add batch dimension and move to GPU
         

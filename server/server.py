@@ -28,8 +28,11 @@ def hello_world():
 ###################
 # Upload media
 
+
 @app.route('/upload_media', methods=['POST'])
 def upload_media():
+
+    print('upload_media')
 
     # Create a new S3 client
     s3 = open_s3_client()
@@ -50,13 +53,15 @@ def upload_media():
     for file in files:
 
         # ensure the file is an image or video
-        if file.content_type not in ['image/jpeg', 'image/png', 'image/gif', 'video/mp4']:
+        if file.content_type not in ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime']:
             return jsonify({'error': 'Invalid file type'}), 400
 
         # TODO: send the files through the pipeline (call process_video or process_image)
-        if file.content_type == 'video/mp4':
+        if file.content_type == 'video/mp4' or file.content_type == 'video/quicktime':
+            print('processing video', file)
             uploads = process_video(file, s3)
         else:
+            print('processing image', file)
             uploads= process_image(file, s3)
         
         uploaded_images += uploads
@@ -118,4 +123,4 @@ def accept_to_inventory():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='localhost', port=5001)
+    app.run(debug=True, host='localhost', port=5003)

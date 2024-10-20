@@ -39,7 +39,7 @@ const page = (props: Props) => {
             formData.append("files[]", file)
         })
 
-        const response = await fetch("http://localhost:5001/upload_images", {
+        const response = await fetch("http://localhost:5003/upload_media", {
             method: "POST",
             body: formData,
         })
@@ -112,6 +112,7 @@ const page = (props: Props) => {
                     "image/jpeg": [".jpg"],
                     "image/heic": [".heic"],
                     "video/mp4": [".mp4"],
+                    "vidoe/mov": [".mov"],
                 }}
             >
                 {({ getRootProps, getInputProps }) => (
@@ -136,7 +137,7 @@ const page = (props: Props) => {
                                     Upload photos and videos
                                 </p>
                                 <p className="text-center italic">
-                                    .png, .jpg, .heic, .mp4
+                                    .png, .jpg, .heic, .mp4, .mov
                                 </p>
                             </>
                         )}

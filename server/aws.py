@@ -28,16 +28,12 @@ def upload_image_to_s3(s3connection, file):
     # Generate a unique image ID
     image_id = str(uuid.uuid4())
 
-    # Secure the file name
-    filename = secure_filename(file.filename)
-    file_extension = filename.split('.')[-1]
-
     # Create the S3 object key
-    s3_key = f"{image_id}.{file_extension}"
+    s3_key = f"{image_id}.png"
 
     # Upload the image to S3
     try:
-        print(f"Uploading {filename} as {s3_key} to S3...")
+        print(f"Uploading png as {s3_key} to S3...")
         s3.upload_fileobj(
             file,
             S3_BUCKET,
@@ -50,5 +46,5 @@ def upload_image_to_s3(s3connection, file):
         return image_url
 
     except Exception as e:
-        print(f"Error uploading file {filename}: {e}")
+        print(f"Error uploading file {s3_key}: {e}")
         return None

@@ -10,6 +10,8 @@ import threading
 from chroma import add_image_vector_to_collection
 from aws import upload_image_to_s3
 from db import update_item
+from io import BytesIO
+import base64
 
 def get_items_from_image(image: Image, debug: bool = False):
     """
@@ -65,7 +67,7 @@ def get_image_filtered_list_data(images: List[Image], transparent_images: List[I
             filtered_images.append(image)
     return res, filtered_images
 
-def process_video(video: object, s3: object, before, status='pending'):
+def process_video(video: object, s3: object, before=True, status='pending'):
     """
     Args
     - video: a video file of a room
@@ -81,7 +83,7 @@ def process_video(video: object, s3: object, before, status='pending'):
     panorama_image = stitcher.create_panorama(video)
 
     # 2) get items from the image
-    segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image(panorama_image, debug=True)
+    segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image(panorama_image)
 
     # 3) get image data from the segmented images
     image_data_list, filtered_images = get_image_filtered_list_data(segmented_images, transparent_segmented_images, segmented_images_bboxes)
@@ -90,7 +92,10 @@ def process_video(video: object, s3: object, before, status='pending'):
     image_urls = []
     
     for file in filtered_images:
-        image_url = upload_image_to_s3(s3, file)
+        buffered_img = BytesIO()
+        file.save(buffered_img, format="PNG")
+        buffered_img.seek(0)
+        image_url = upload_image_to_s3(s3, buffered_img)
         image_urls.append(image_url)
 
     for url, data in zip(image_urls, image_data_list):
@@ -107,7 +112,7 @@ def process_video(video: object, s3: object, before, status='pending'):
     # filtered_images are the images we want to display on frontend
     return image_urls
 
-def process_image(image: Image, s3: object, before, status='pending'):
+def process_image(image: Image, s3: object, before=True, status='pending'):
     """
     Args
     - image: a single image of a room
@@ -120,7 +125,7 @@ def process_image(image: Image, s3: object, before, status='pending'):
     """
 
     # 1) get items from the image
-    segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image(image, debug=True)
+    segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image(image)
 
     # 2) get image data from the segmented images
     image_data_list, filtered_images = get_image_filtered_list_data(segmented_images, transparent_segmented_images, segmented_images_bboxes)
