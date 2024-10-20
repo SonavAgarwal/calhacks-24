@@ -39,7 +39,7 @@ const page = (props: Props) => {
             formData.append("files[]", file)
         })
 
-        const response = await fetch("http://localhost:5000/upload_images", {
+        const response = await fetch("http://localhost:5001/upload_images", {
             method: "POST",
             body: formData,
         })
@@ -64,7 +64,7 @@ const page = (props: Props) => {
             {/* the selected one is black background white text */}
             {/* the background should slide between the two options, like a pill */}
 
-            <div className="border-border relative flex w-64 rounded-full border bg-background">
+            <div className="relative flex w-64 rounded-full border border-border bg-background">
                 {/* Sliding background */}
                 <div
                     className={twMerge(
@@ -115,7 +115,7 @@ const page = (props: Props) => {
                 {({ getRootProps, getInputProps }) => (
                     <div
                         className={twMerge(
-                            "border-border flex h-96 w-96 flex-col items-center justify-center rounded-xl border bg-background p-4 transition-opacity",
+                            "flex h-96 w-96 flex-col items-center justify-center rounded-xl border border-border bg-background p-4 transition-opacity",
                             loading && "opacity-35",
                         )}
                         {...getRootProps()}
@@ -148,7 +148,7 @@ const page = (props: Props) => {
                                         <img
                                             src={URL.createObjectURL(file)}
                                             alt={`uploaded file ${i}`}
-                                            className="border-border rounded-xl border object-cover"
+                                            className="rounded-xl border border-border object-cover"
                                         />
                                     </div>
                                 ))}
@@ -160,7 +160,7 @@ const page = (props: Props) => {
 
             <div className="flex w-96 justify-center gap-4">
                 <button
-                    className="border-border flex-1 rounded-xl border bg-background px-4 py-2 text-black transition-opacity disabled:opacity-35"
+                    className="flex-1 rounded-xl border border-border bg-background px-4 py-2 text-black transition-opacity disabled:opacity-35"
                     onClick={() => setFiles([])}
                     disabled={files.length === 0 || loading}
                 >
