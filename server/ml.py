@@ -77,19 +77,13 @@ def process_video(video_path: str):
     # 1) load video from video_path
     stitcher.create_panorama(video_path)
 
-    # 2) convert video to panoramic
+    # 2) get items from the image
+    segmented_images = get_items_from_image("pano.png")
 
-    # 3) YOLO panoramic
-
-    # 4) use YOLO to run SAM on img
-
-    # 5) filter out bad imgs with Hyperbolic
-
-    # 6) get data of all the filtered images
+    # 3) get image data from the segmented images
+    image_data = get_image_filtered_list_data(segmented_images)
 
     # 7.1) upload vector embedding + METADATA to chromadb
     # 7.2) upload name, desc, category, price 
-    
-
 
     pass
