@@ -144,26 +144,22 @@ def make_claim():
     if not item_ids:
         return jsonify({"error": "No item IDs provided"}), 400
 
-    removed_items = []
-    removed_images = []
+    claimed_images = []
 
+    # For each item to claim
     for item_id in item_ids:
-        # Remove item from SQLite database
-        if remove_item(item_id):
-            removed_items.append(item_id)
-
         # Find and remove associated images from ChromaDB
         images = filter_images_by_metadata(item_id=item_id)
         if images and 'ids' in images:
             image_ids = images['ids'][0]
             for image_id in image_ids:
-                remove_image(image_id)        
-                removed_images.append(image_id)
+                update_image_status(image_id, new_status='claimed')        
+                claimed_images.append(image_id)
 
     return jsonify({
-        "message": "Claim processed successfully",
-        "removed_items": removed_items,
-        "removed_images": removed_images
+        "message": "Claim processed successfully. Image statuses updated to 'claimed'",
+        "claimed_items": item_ids,
+        "removed_images": claimed_images
     }), 200
 
 
