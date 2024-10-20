@@ -1,0 +1,115 @@
+import { Claim, Item } from "./types"
+
+export const items: Item[] = [
+    {
+        id: "1",
+        name: "Sofa",
+        description:
+            "A three-seater couch, slightly damaged and wet from the storm.",
+        price: 500,
+        count: 1,
+        category: "Furniture",
+        images: ["https://picsum.photos/seed/6/200"],
+    },
+    {
+        id: "2",
+        name: "Lamp",
+        description: "A broken floor lamp with shattered glass pieces.",
+        price: 45,
+        count: 1,
+        category: "Furniture",
+        images: ["https://picsum.photos/seed/7/200"],
+    },
+    {
+        id: "3",
+        name: "Dining Chair",
+        description: "A wooden dining chair with a broken leg.",
+        price: 60,
+        count: 3,
+        category: "Furniture",
+        images: ["https://picsum.photos/seed/8/200"],
+    },
+    {
+        id: "4",
+        name: "Jacket",
+        description: "A soaked winter jacket left on the ground outside.",
+        price: 80,
+        count: 1,
+        category: "Clothes",
+        images: ["https://picsum.photos/seed/9/200"],
+    },
+    {
+        id: "5",
+        name: "Laptop",
+        description: "A damaged laptop with a cracked screen.",
+        price: 1200,
+        count: 1,
+        category: "Electronics",
+        images: [
+            "https://picsum.photos/seed/10/200",
+            "https://picsum.photos/seed/13/200",
+            "https://picsum.photos/seed/18/200",
+        ],
+    },
+    {
+        id: "6",
+        name: "T-shirt",
+        description: "A mud-stained t-shirt caught in a tree branch.",
+        price: 20,
+        count: 2,
+        category: "Clothes",
+        images: ["https://picsum.photos/seed/11/200"],
+    },
+    {
+        id: "7",
+        name: "Book",
+        description: "A waterlogged novel with torn pages.",
+        price: 15,
+        count: 5,
+        category: "Miscellaneous",
+        images: ["https://picsum.photos/seed/2/200"],
+    },
+    {
+        id: "8",
+        name: "Television",
+        description: "A smashed 50-inch television screen found in the yard.",
+        price: 600,
+        count: 1,
+        category: "Electronics",
+        images: ["https://picsum.photos/seed/3/200"],
+    },
+    {
+        id: "9",
+        name: "Shoes",
+        description:
+            "A pair of muddy running shoes scattered across the driveway.",
+        price: 100,
+        count: 1,
+        category: "Clothes",
+        images: ["https://picsum.photos/seed/4/200"],
+    },
+    {
+        id: "0",
+        name: "Desk Lamp",
+        description: "A small desk lamp missing the bulb, bent out of shape.",
+        price: 25,
+        count: 1,
+        category: "Furniture",
+        images: ["https://picsum.photos/seed/5/200"],
+    },
+]
+
+// export const claims: Claim[] = [
+//     {
+//         id: 1,
+//         name: "John Doe",
+//         dateFiled: new Date("2021-01-01"),
+//         items: [items[0], items[1]],
+//     },
+//     {
+//         id: 2,
+//         name: "Jane Doe",
+//         dateFiled: new Date("2021-01-02"),
+//         items: [items[2]],
+//     },
+// ]
