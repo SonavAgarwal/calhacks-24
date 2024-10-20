@@ -68,7 +68,7 @@ def find_nearest_image(vector_embedding):
     "Return the nearest image to the given embedding"
     return find_k_nearest_images(vector_embedding, k=1)
 
-def get_item_uuid_of_embedding(vector_embedding, distance_threshold=500):
+def get_item_uuid_of_embedding(vector_embedding, distance_threshold=400):
     """
     Get the item UUID of an embedding if there's a similar one within the distance threshold,
     otherwise generate a new UUID.
@@ -173,3 +173,9 @@ def update_image_status(image_id, new_status):
     except Exception as e:
         print(f"An error occurred while updating image status: {str(e)}")
         return False
+
+def remove_image(image_id):
+    try:
+        collection.delete(ids=[image_id])
+    except Exception as e:
+        print(f"Error removing image {image_id} from ChromaDB: {str(e)}")

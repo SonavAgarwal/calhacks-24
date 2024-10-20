@@ -38,7 +38,7 @@ def get_image_data(image, transparent_image):
 
     vector_embedding = get_image_vector_embedding(transparent_image)
 
-    results = hyperbolic.process_images([image])
+    results = hyperbolic.process_images([transparent_image])
     if not results:
         return None
     else:
