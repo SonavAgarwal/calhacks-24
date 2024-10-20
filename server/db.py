@@ -1,67 +1,69 @@
 import sqlite3
 import uuid
-from datetime import datetime
 
-# Function to create the UUID
 def generate_uuid():
+    """Generate a new UUID."""
     return str(uuid.uuid4())
 
-# Function to open a connection
 def open_connection():
+    """Open a connection to the SQLite database."""
     return sqlite3.connect('items_and_images.db')
 
-# Connect to SQLite database (or create it)
-conn = open_connection()
-cursor = conn.cursor()
+def initialize_database():
+    """Initialize the database by creating necessary tables."""
+    conn = open_connection()
+    cursor = conn.cursor()
 
-# Create Items Table
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Items (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT,
-        category TEXT,
-        price TEXT,
-        count INTEGER
-    )
-''')
+    # Create Items Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Items (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            category TEXT,
+            price TEXT,
+            count INTEGER
+        )
+    ''')
 
-# Create Image Metadata Table
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Images (
-        id TEXT PRIMARY KEY,
-        after BOOLEAN NOT NULL,
-        FOREIGN KEY (item_id) REFERENCES Items (id)
-    )
-''')
+    # Create Image Metadata Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Images (
+            id TEXT PRIMARY KEY,
+            item_id TEXT NOT NULL,
+            after BOOLEAN NOT NULL,
+            FOREIGN KEY (item_id) REFERENCES Items (id)
+        )
+    ''')
 
-# Create Upload Session Table
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS UploadSession (
-        id TEXT PRIMARY KEY,
-        processing BOOLEAN NOT NULL,
-        FOREIGN KEY (image_id) REFERENCES Images (id)
-        after BOOLEAN NOT NULL
-    )
-''')
+    # Create Upload Session Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS UploadSession (
+            id TEXT PRIMARY KEY,
+            image_id TEXT NOT NULL,
+            processing BOOLEAN NOT NULL,
+            after BOOLEAN NOT NULL,
+            FOREIGN KEY (image_id) REFERENCES Images (id)
+        )
+    ''')
 
-conn.commit()
+    conn.commit()
+    conn.close()
 
-# Close the connection
-conn.close()
-
-
-"""
-METHODS
-"""
-
-# Add item to Items table
 def set_item(name, description, category, price, count, item_id=None):
     """
-    Sets item associated to a uuid to a certain value. This either
-    updates an existing table entry or adds a new one. If no uuid
-    is specified, a new entry is created. Otherwise it updates an
-    existing item with the given uuid.
+    Set or update an item in the Items table.
+
+    Args:
+        name (str): The name of the item.
+        description (str): The description of the item.
+        category (str): The category of the item.
+        price (str): The price of the item.
+        count (int): The count of the item.
+        item_id (str, optional): The UUID of the item. If not provided, a new UUID will be generated.
+
+    Returns:
+        str: The UUID of the item (either the provided one or a newly generated one).
     """
     conn = open_connection()
     cursor = conn.cursor()
@@ -78,17 +80,17 @@ def set_item(name, description, category, price, count, item_id=None):
     conn.close()
     return item_id
 
-def set_image(is_after, item_id, image_id=None):
+def set_image(item_id, is_after, image_id=None):
     """
-    Sets an image associated with an item in the Images table.
+    Set an image associated with an item in the Images table.
     
     Args:
-    item_id (str): The UUID of the item the image is associated with.
-    is_after (bool): Whether the image is an 'after' image (True) or a 'before' image (False).
-    image_id (str, optional): The UUID for the image. If not provided, a new UUID will be generated.
+        item_id (str): The UUID of the item the image is associated with.
+        is_after (bool): Whether the image is an 'after' image (True) or a 'before' image (False).
+        image_id (str, optional): The UUID for the image. If not provided, a new UUID will be generated.
     
     Returns:
-    str: The UUID of the image (either the provided one or a newly generated one).
+        str: The UUID of the image (either the provided one or a newly generated one).
     """
     conn = open_connection()
     cursor = conn.cursor()
@@ -106,6 +108,16 @@ def set_image(is_after, item_id, image_id=None):
     return image_id
 
 def add_upload_session(image_ids, after):
+    """
+    Add a new upload session for multiple images.
+
+    Args:
+        image_ids (list): List of image UUIDs to be included in the upload session.
+        after (bool): Whether these are 'after' images (True) or 'before' images (False).
+
+    Returns:
+        str: The UUID of the newly created upload session.
+    """
     conn = open_connection()
     cursor = conn.cursor()
 
@@ -120,3 +132,38 @@ def add_upload_session(image_ids, after):
     conn.commit()
     conn.close()
     return upload_session_id
+
+def upload_session_complete(upload_session_id):
+    """
+    Mark a given upload session as complete by setting its processing status to False.
+    
+    Args:
+        upload_session_id (str): The UUID of the upload session to mark as complete.
+    
+    Returns:
+        bool: True if the update was successful, False otherwise.
+    """
+    conn = open_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('''
+            UPDATE UploadSession
+            SET processing = ?
+            WHERE id = ?
+        ''', (False, upload_session_id))
+
+        if cursor.rowcount == 0:
+            print(f"No upload session found with id: {upload_session_id}")
+            return False
+
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return False
+    finally:
+        conn.close()
+
+# Initialize the database when this module is imported
+initialize_database()
