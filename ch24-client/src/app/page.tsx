@@ -101,13 +101,32 @@ const page = (props: Props) => {
     const items = useMemo<Item[]>(() => {
         // filter items based on before
         let data = response?.items ?? []
+        data = JSON.parse(JSON.stringify(data))
+        data = data.filter((item) =>
+            item.images.some((image) => image.status === "inventory"),
+        )
+
+        // only show images that are status inventory
+        data = data.map((item) => {
+            return {
+                ...item,
+                images: item.images.filter(
+                    (image) => image.status === "inventory",
+                ),
+            }
+        })
+
         return data
     }, [before, response])
 
     const matchedItems = useMemo<Item[]>(() => {
         // filter items based on before
-        // let data = []
-        return []
+        let data = response?.items ?? []
+        data = JSON.parse(JSON.stringify(data))
+        data = data.filter((item) =>
+            item.images.some((image) => image.status === "matched"),
+        )
+        return data
     }, [before, response])
 
     const table = useReactTable({
@@ -119,16 +138,22 @@ const page = (props: Props) => {
         enableMultiRowSelection: true,
     })
 
+    const matchedTable = useReactTable({
+        data: matchedItems,
+        columns: itemColumns,
+        getCoreRowModel: getCoreRowModel(),
+        getRowId: (row) => row.id,
+        enableRowSelection: true,
+        enableMultiRowSelection: true,
+    })
+
     useEffect(() => {
         function fetchData() {
-            fetch(
-                `${process.env.NEXT_PUBLIC_BASE_URL}/inventory?status=inventory`,
-                {
-                    headers: {
-                        "ngrok-skip-browser-warning": "true",
-                    },
+            fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/inventory`, {
+                headers: {
+                    "ngrok-skip-browser-warning": "true",
                 },
-            )
+            })
                 .then((response) => response.json())
                 .then((data) => {
                     setLoading(false)
@@ -161,6 +186,9 @@ const page = (props: Props) => {
         // open /pdf in a new tab
         window.open("/pdf", "_blank")
     }
+
+    console.log("items", items)
+    console.log("matchedItems", matchedItems)
 
     if (loading || processing.current) {
         return (
@@ -251,7 +279,7 @@ const page = (props: Props) => {
                             {!processing.current && response && (
                                 <>
                                     <ItemsTable
-                                        data={response.items}
+                                        data={items}
                                         table={table}
                                         onRowClick={(item) => {
                                             if (before) return
@@ -276,7 +304,7 @@ const page = (props: Props) => {
                                             </div>
                                             <ItemsTable
                                                 data={matchedItems}
-                                                table={table}
+                                                table={matchedTable}
                                                 onRowClick={(item) => {
                                                     if (before) return
                                                     if (enlargedRow === item) {

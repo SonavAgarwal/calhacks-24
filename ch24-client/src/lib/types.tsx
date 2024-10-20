@@ -19,7 +19,7 @@ export interface Item {
 export interface Image {
     image_id: string
     url_path: string
-    status: "pending" | "inventory" | "rejected"
+    status: "pending" | "inventory" | "rejected" | "matched"
     before: boolean
 }
 

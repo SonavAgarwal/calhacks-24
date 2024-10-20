@@ -249,6 +249,27 @@ const page = (props: Props) => {
             // confirm matches
             console.log("Confirming matches", selectedRows)
 
+            const res3 = await fetch(
+                `${process.env.NEXT_PUBLIC_BASE_URL}/confirm_matches`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "ngrok-skip-browser-warning": "true",
+                    },
+                    body: JSON.stringify({
+                        item_ids: selectedRows.map((row) => row.original.id),
+                    }),
+                },
+            )
+
+            if (res3.ok) {
+                console.log("Items confirmed")
+                router.push("/")
+            } else {
+                console.error("Error confirming items")
+            }
+
             // // claim items
             // console.log("Claiming items", selectedRows)
             // // store in local storage
