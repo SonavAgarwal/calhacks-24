@@ -7,6 +7,8 @@ import hyperbolic
 import stitcher
 from predict import segment, get_unique_filename, show_masks_and_boxes_on_image
 import threading
+from chroma import add_image_vector_to_collection
+from aws import upload_image_to_s3, open_s3_client
 
 def get_items_from_image(img_path: str, debug: bool = False):
     """
@@ -58,7 +60,7 @@ def get_image_filtered_list_data(images: List[Image], transparent_images: List[I
   - list of unfiltered images
   - list of bounding boxes of the images
 
-  returns Tuple[vectorEmbedding, name, desc, category]
+  returns Tuple[vectorEmbedding, name, desc, category], List[Image]
   """
   res = []
   filtered_images = []
@@ -69,13 +71,14 @@ def get_image_filtered_list_data(images: List[Image], transparent_images: List[I
       filtered_images.append(image)
   return res, filtered_images
 
-def process_video(video_path: str):
+def process_video(video_path: str, s3: object):
   """
   Args
   - video: a video file of a room
+  - s3: s3 client
 
   Return
-  - String: response of successful video upload
+  - List[String]: response of successful image upload
   """
 
   # 1) load video from video_path
@@ -86,11 +89,49 @@ def process_video(video_path: str):
 
   # 3) get image data from the segmented images
   image_data, filtered_images = get_image_filtered_list_data(segmented_images, transparent_segmented_images, segmented_images_bboxes)
-  # 7.1) upload vector embedding + METADATA to chromadb
-  # 7.2) upload name, desc, category, price 
+  # 4.1) upload vector embedding + METADATA to chromadb
+  # 4.2) upload name, desc, category, price 
+  uploaded_images = []
+  
+  for file in filtered_images:
+      image_url = upload_image_to_s3(s3, file)
+      uploaded_images.append(image_url)
+
+  for img, data in zip(filtered_images, image_data):
+      vector_embedding, name, desc, category, price = data
+      image_id = add_image_vector_to_collection(vector_embedding, name, desc, category, price)
+      print(f"Added image with item_id {image_id} to the collection.")
 
   # filtered_images are the images we want to display on frontend
+  return uploaded_images
 
-  pass
+def process_image(image_path: str, s3: object):
+  """
+  Args
+  - image_path: a single image of a room
+  - s3: s3 client
 
-process_video("../test3.mov")
+  Return
+  - List[String]: response of successful image upload
+  """
+
+  # 1) get items from the image
+  segmented_images, segmented_images_bboxes, transparent_segmented_images = get_items_from_image(image_path, debug=True)
+
+  # 2) get image data from the segmented images
+  image_data, filtered_images = get_image_filtered_list_data(segmented_images, transparent_segmented_images, segmented_images_bboxes)
+  # 3.1) upload vector embedding + METADATA to chromadb
+  # 3.2) upload name, desc, category, price 
+  uploaded_images = []
+  
+  for file in filtered_images:
+      image_url = upload_image_to_s3(s3, file)
+      uploaded_images.append(image_url)
+
+  for img, data in zip(filtered_images, image_data):
+      vector_embedding, name, desc, category, price = data
+      image_id = add_image_vector_to_collection(vector_embedding, name, desc, category, price)
+      print(f"Added image with item_id {image_id} to the collection.")
+
+  # filtered_images are the images we want to display on frontend
+  return uploaded_images
