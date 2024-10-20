@@ -32,6 +32,7 @@ def hello_world():
 
 @app.route('/upload_media', methods=['POST'])
 def upload_media():
+    before = request.args.get('before')
 
     # with each new upload session set prev pending to done
     set_pending_to_done()
@@ -63,10 +64,10 @@ def upload_media():
         # TODO: send the files through the pipeline (call process_video or process_image)
         if file.content_type == 'video/mp4' or file.content_type == 'video/quicktime':
             print('processing video', file)
-            uploads = process_video(file, s3)
+            uploads = process_video(file, s3, before)
         else:
             print('processing image', file)
-            uploads = process_image(file, s3)
+            uploads = process_image(file, s3, before)
         
         uploaded_images += uploads
 
@@ -207,11 +208,23 @@ def set_pending_to_done():
 def accept_to_inventory():
     data = request.json
     image_ids = data['image_ids']
+    print(f"Accepting images to inventory: {image_ids}")
 
-    # do something with image_ids
+    for image_id in image_ids:
+        # update the status of the image to 'inventory'
+        update_image_status(image_id, 'inventory')
 
     return jsonify({"message": "Images accepted to inventory successfully"}), 200
 
+@app.route('/delete_from_inventory', methods=['POST'])
+def delete_from_inventory():
+    data = request.json
+    item_id = data['item_id']
+    print(f"Deleting images from inventory: {item_id}")
+
+    delete_images_by_item_id(item_id)
+
+    return jsonify({"message": "Images deleted from inventory successfully"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='localhost', port=5003)

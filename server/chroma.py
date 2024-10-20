@@ -68,7 +68,7 @@ def find_nearest_image(vector_embedding):
     "Return the nearest image to the given embedding"
     return find_k_nearest_images(vector_embedding, k=1)
 
-def get_item_uuid_of_embedding(vector_embedding, distance_threshold=500):
+def get_item_uuid_of_embedding(vector_embedding, distance_threshold=400):
     """
     Get the item UUID of an embedding if there's a similar one within the distance threshold,
     otherwise generate a new UUID.
