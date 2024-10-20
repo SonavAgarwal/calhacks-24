@@ -31,7 +31,7 @@ def get_item_details_from_image(image):
         {"type": "text", "text": """
         List the following details for the item outlined by a thin red line in this image:
         {"name": <string>, "description": <string>, "category": <string>, "price": <float>, "is_object": <int>}.
-        category can be one of the following: Electronics, Appliances, Furniture, Kitchenware, Containers, Clothing and Accessories, Toiletry, Tools and Equipment, Toys and Games, Home Decor, Bedding and Linens, Kitchenware, Hobby and Craft Supplies, Medical Equipment, Pet Supplies, Food, Firearms
+        category can be one of the following: Electronics, Appliances, Furniture, Kitchenware, Containers, Clothing and Accessories, Toiletry, Tools and Equipment, Toys and Games, Home Decor, Bedding and Linens, Kitchenware, Hobby and Craft Supplies, Medical Equipment, Pet Supplies, Pets, Food, Firearms
         is_object should be 1 for recognizable non-human objects/furniture. is_object should be 0 for walls, people, persons, humans, men, women and unrecognizable things. If you are at all unsure about what is outlined in red, say it is unrecognizable and set is_object to 0. You are checking if the thing highlighted by the outline is_object, NOT other objects in the image.
         price is the estimated dollar value of the object.
         json output should be one dict like the following example {"name": <string>, "description": <string>, "category": <string>, , "price": <float>, "is_object": <int>}

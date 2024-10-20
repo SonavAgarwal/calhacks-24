@@ -175,5 +175,6 @@ def get_item(item_id):
     finally:
       conn.close()
 
+
 # Initialize the database when this module is imported
 initialize_database()

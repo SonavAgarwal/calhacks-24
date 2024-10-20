@@ -68,7 +68,7 @@ def find_nearest_image(vector_embedding):
     "Return the nearest image to the given embedding"
     return find_k_nearest_images(vector_embedding, k=1)
 
-def get_item_uuid_of_embedding(vector_embedding, distance_threshold=500):
+def get_item_uuid_of_embedding(vector_embedding, distance_threshold=400):
     """
     Get the item UUID of an embedding if there's a similar one within the distance threshold,
     otherwise generate a new UUID.
@@ -132,3 +132,39 @@ def filter_images_by_metadata(item_id=None, url_path=None, before=None, status=N
     )
     
     return results
+
+# update image status
+def update_image_status(image_id, status):
+    """
+    Update the status of an image in the ChromaDB collection.
+    
+    Args:
+        image_id (str): The UUID of the image.
+        status (str): The new status of the image.
+    """
+    collection.update(
+        ids=[image_id],
+        metadatas=[{"status": status}]
+    )
+
+    print(f"Updated status of image with ID {image_id} to '{status}'.")
+
+def delete_images_by_item_id(item_id):
+    """
+    Delete all images associated with a given item ID.
+    
+    Args:
+        item_id (str): The UUID of the item.
+    """
+    results = filter_images_by_metadata(item_id=item_id)
+    
+    if 'ids' in results:
+        image_ids = results['ids'][0]
+        
+        if image_ids:
+            collection.delete(ids=image_ids)
+            print(f"Deleted {len(image_ids)} images associated with item ID {item_id}.")
+        else:
+            print(f"No images found for item ID {item_id}.")
+    else:
+        print(f"No images found for item ID {item_id}.")
