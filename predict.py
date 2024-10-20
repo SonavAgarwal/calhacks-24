@@ -3,11 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import gc
-from PIL import Image
+from PIL import Image, ImageDraw
 import os
 from transformers import pipeline, SamModel, SamProcessor
 from ultralytics import YOLO
 import supervision as sv
+import cv2
+from torchvision.transforms import ToPILImage
 
 def show_mask(mask, ax, random_color=False):
   if random_color:
@@ -69,28 +71,77 @@ def segment_image(raw_image, bboxes, model, processor, device):
   masks = processor.image_processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu())
   return masks[0]
 
-def segment(img_path):
-  yolo_model = YOLO("yolov8n.pt")
-  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  model = SamModel.from_pretrained("facebook/sam-vit-huge").to(device)
-  processor = SamProcessor.from_pretrained("facebook/sam-vit-huge")
+def segment(img_path, debug=False, padding_ratio=0.2):
+    yolo_model = YOLO("yolov8n.pt")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = SamModel.from_pretrained("facebook/sam-vit-huge").to(device)
+    processor = SamProcessor.from_pretrained("facebook/sam-vit-huge")
 
-  raw_image, bboxes = detect_objects(img_path, yolo_model)
-  masks = segment_image(raw_image, bboxes, model, processor, device)
+    raw_image, bboxes = detect_objects(img_path, yolo_model)
+    masks = segment_image(raw_image, bboxes, model, processor, device)
+    if debug:
+        save_masked_path = get_unique_filename("./predictions/masked_image.png")
+        save_boxes_path = get_unique_filename("./predictions/boxes_image.png")
 
-  segmented_images = []
-  for mask, bbox in zip(masks, bboxes):
-      x_min, y_min, x_max, y_max = bbox
-      cropped_image = raw_image.crop((x_min, y_min, x_max, y_max))
-      mask_pil = Image.fromarray((mask.squeeze().numpy() * 255).astype(np.uint8))
-      mask_resized = mask_pil.resize(cropped_image.size, resample=Image.BILINEAR)
-      segmented_image = Image.composite(cropped_image, Image.new("RGB", cropped_image.size), mask_resized)
-      segmented_images.append(segmented_image)
+    show_masks_and_boxes_on_image(raw_image, [], bboxes, save_boxes_path)
+    show_masks_and_boxes_on_image(raw_image, masks, [], save_masked_path)
 
-  return segmented_images
+    segmented_images = []
+
+    # Loop over the masks and create cropped images with masks outlined
+    for i, mask in enumerate(masks):
+        mask_np = np.array(mask).squeeze()  # Ensure mask is 2D by removing extra dimensions if present
+
+        # Find the bounding box for the mask by getting min/max coordinates where the mask is present
+        y_indices, x_indices = np.where(mask_np > 0)  # Ensure mask is binary
+        if len(y_indices) == 0 or len(x_indices) == 0:
+            continue  # Skip if mask is empty
+
+        x_min, x_max = np.min(x_indices), np.max(x_indices)
+        y_min, y_max = np.min(y_indices), np.max(y_indices)
+
+        # Create a square bounding box around the mask
+        bbox_size = max(x_max - x_min, y_max - y_min)
+
+        # Add padding to include more context around the mask
+        padding = int(bbox_size * padding_ratio)
+        x_min = max(0, x_min - padding)
+        y_min = max(0, y_min - padding)
+        x_max = min(raw_image.width, x_max + padding)
+        y_max = min(raw_image.height, y_max + padding)
+
+        # Crop the image around the padded bounding box
+        cropped_image = raw_image.crop((x_min, y_min, x_max, y_max))
+
+        # Convert the cropped image to a format that can be edited with PIL
+        cropped_image_np = np.array(cropped_image)
+        img_with_outline = Image.fromarray(cropped_image_np)
+
+        # Convert mask to 1-pixel outline using a simple dilation trick
+        mask_cropped = mask_np[y_min:y_max, x_min:x_max]
+        outline = np.zeros_like(mask_cropped)
+
+        # Create an outline by checking neighbors
+        for y, x in zip(*np.where(mask_cropped > 0)):
+            if (y > 0 and mask_cropped[y-1, x] == 0) or \
+               (y < mask_cropped.shape[0] - 1 and mask_cropped[y+1, x] == 0) or \
+               (x > 0 and mask_cropped[y, x-1] == 0) or \
+               (x < mask_cropped.shape[1] - 1 and mask_cropped[y, x+1] == 0):
+                outline[y, x] = 1  # Mark the boundary
+
+        # Draw the outline on the cropped image in red
+        draw = ImageDraw.Draw(img_with_outline)
+        for y, x in zip(*np.where(outline > 0)):
+            draw.point((x, y), fill="red")
+
+        segmented_images.append(img_with_outline)
+
+    return segmented_images
 
 # Example usage:
 img_path = "./images/pano.jpg"
-segmented_images = segment(img_path)
+segmented_images = segment(img_path, debug=True)
+if not os.path.exists("./predictions/segments"): 
+    os.makedirs("./predictions/segments")
 for i, img in enumerate(segmented_images):
-    img.save(f"./predictions/segmented_{i}.png")
+    img.save(f"./predictions/segments/segmented_{i}.png")
