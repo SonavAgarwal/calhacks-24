@@ -169,7 +169,7 @@ def get_json(img):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "List ALL the unique items/objects/furniture in this image of even small value, including their estimated monetary value and pixel bounding box in image. Output format MUST be json, similar to the following: {'item':{'name':'','quantity':'','cost_per_item':'', 'bounding_boxes':[{'x1':,'x2':,'y1':,'y2':},]}}. DO NOT respond with anything other than the json. start json output here:"},
+                    {"type": "text", "text": """List ALL the unique items/objects/furniture in this image of even small value, including their estimated monetary value and pixel bounding box in image. Output format MUST be json, similar to the following: {"item":{"name":"","quantity":"","cost_per_item":"", "bounding_boxes":[{"x1":,"x2":,"y1":,"y2":},]}}. DO NOT respond with anything other than the json. start json output here:"""},
                     {
                         "type": "image_url",
                         "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"},
