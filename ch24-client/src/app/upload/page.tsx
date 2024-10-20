@@ -112,7 +112,7 @@ const page = (props: Props) => {
                     "image/jpeg": [".jpg"],
                     "image/heic": [".heic"],
                     "video/mp4": [".mp4"],
-                    "vidoe/mov": [".mov"],
+                    "video/quicktime": [".mov"],
                 }}
             >
                 {({ getRootProps, getInputProps }) => (

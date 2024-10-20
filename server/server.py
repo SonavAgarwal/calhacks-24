@@ -1,18 +1,18 @@
-import boto3
-from flask import Flask, request, jsonify
-from werkzeug.utils import secure_filename
-import uuid
 import json
-from datetime import datetime
-from flask_cors import CORS
-from chroma import *
-
-from aws import open_s3_client, upload_image_to_s3
-from ml import process_image, process_video
-
 # import env
 import os
+import uuid
+from datetime import datetime
+
+import boto3
+from aws import open_s3_client, upload_image_to_s3
+from chroma import *
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from ml import process_image, process_video
+from werkzeug.utils import secure_filename
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -84,7 +84,8 @@ def get_items():
     before = request.args.get('before')
     status = request.args.get('status')
 
-    filtered_images = filter_images_by_metadata(item_id, url_path, before, status)
+    filtered_images = filter_images_by_metadata(
+        item_id, url_path, before, status)
 
     for image in filtered_images:
         print(image)
