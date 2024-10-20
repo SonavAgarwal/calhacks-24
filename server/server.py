@@ -100,28 +100,34 @@ def get_items():
     items = {}
     for id, metadata in results:
         print(f"Item ID: {id}, Metadata: {metadata}")
-        # get the item details from the image
+        # Get the item details from the image
         item_id = metadata.get('item_id')
         if not item_id:
             continue
         item_details = get_item(item_id)
         if item_details and item_details['id'] not in items:
+            item_details['before_images'] = []
+            item_details['after_images'] = []
+            item_details['before_count'] = item_details.get('before_count', 0)
+            item_details['after_count'] = item_details.get('after_count', 0)
             items[item_details['id']] = item_details
 
-
     print("BEFORE IMAGES ADDED TO ITEMS")
-    # print out the items
+    # Print out the items
     for item in items.values():
         print(f"Item: {item}")
 
-    # now add the images to the items under the 'images' key
+    # Now add the images to the items under the 'before_images' or 'after_images' key
     for id, metadata in results:
         print(f"Adding image to item {id}")
         item_obj = items.get(metadata.get('item_id', None), None)
         if item_obj:
-            if 'images' not in item_obj:
-                item_obj['images'] = []
-            item_obj['images'].append(metadata)
+            if metadata.get('before', True):  # Assuming 'before' is True by default
+                item_obj['before_images'].append(metadata)
+                item_obj['before_count'] += 1
+            else:
+                item_obj['after_images'].append(metadata)
+                item_obj['after_count'] += 1
 
     print("AFTER IMAGES ADDED TO ITEMS")
     # print out the items
@@ -151,6 +157,22 @@ def get_pending_uploads():
 
     # TODO: return all the images that are pending upload (not yet in inventory)
     return jsonify({"message": "Pending uploads fetched successfully"}), 200
+
+
+###################
+# Set pending images to done
+
+@app.route('/set_pending_to_done', methods=['POST'])
+def set_pending_to_done():
+    data = request.json
+
+    result = filter_images_by_metadata(status='pending')
+    image_ids = result['ids'] 
+    for id in image_ids:
+        update_image_status(id, new_status='done')
+
+    return jsonify({"message": f"Images {image_ids} updated from 'pending' to 'done' status"}), 200
+
 
 
 ###################

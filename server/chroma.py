@@ -132,3 +132,44 @@ def filter_images_by_metadata(item_id=None, url_path=None, before=None, status=N
     )
     
     return results
+
+def update_image_status(image_id, new_status):
+    """
+    Update the status of an image with the given image_id in the ChromaDB collection.
+    
+    Args:
+        image_id (str): The UUID of the image to update.
+        new_status (str): The new status to set for the image.
+    
+    Returns:
+        bool: True if the update was successful, False otherwise.
+    """
+    try:
+        # First, we need to get the current metadata for the image
+        results = collection.get(
+            ids=[image_id],
+            include=['metadatas']
+        )
+
+        if not results['metadatas']:
+            print(f"No image found with id: {image_id}")
+            return False
+
+        # Get the current metadata
+        current_metadata = results['metadatas'][0]
+
+        # Update the status in the metadata
+        current_metadata['status'] = new_status
+
+        # Update the image in the collection with the new metadata
+        collection.update(
+            ids=[image_id],
+            metadatas=[current_metadata]
+        )
+
+        print(f"Successfully updated status of image {image_id} to {new_status}")
+        return True
+
+    except Exception as e:
+        print(f"An error occurred while updating image status: {str(e)}")
+        return False

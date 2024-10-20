@@ -14,7 +14,7 @@ def initialize_database():
     conn = open_connection()
     cursor = conn.cursor()
 
-    # Create Items Table
+    # Create Items Table with before_count and after_count
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Items (
             id TEXT PRIMARY KEY,
@@ -22,7 +22,8 @@ def initialize_database():
             description TEXT,
             category TEXT,
             price TEXT,
-            count INTEGER
+            before_count INTEGER,
+            after_count INTEGER
         )
     ''')
 
@@ -38,7 +39,6 @@ def set_item(name, description, category, price, item_id):
         description (str): The description of the item.
         category (str): The category of the item.
         price (str): The price of the item.
-        count (int): The count of the item.
         item_id (str, optional): The UUID of the item. If not provided, a new UUID will be generated.
 
     Returns:
@@ -48,21 +48,21 @@ def set_item(name, description, category, price, item_id):
     cursor = conn.cursor()
 
     cursor.execute('''
-        INSERT OR REPLACE INTO Items (id, name, description, category, price, count)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (item_id, name, description, category, price, 1)) # sets count to 1
+        INSERT OR REPLACE INTO Items (id, name, description, category, price, before_count, after_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (item_id, name, description, category, price, 1, 0))  # sets before_count to 1 and after_count to 0
 
     conn.commit()
     conn.close()
     return item_id
 
-def increment_item_count(item_id):
+def increment_item_count(item_id, before=True):
     """
-    Increment the count of a given item by a specified amount.
+    Increment the before_count or after_count of a given item by 1.
 
     Args:
         item_id (str): The UUID of the item to increment.
-        increment (int, optional): The amount to increment the count by. Defaults to 1.
+        before (bool, optional): If True, increment before_count, otherwise increment after_count. Defaults to True.
 
     Returns:
         bool: True if the update was successful, False otherwise.
@@ -72,25 +72,33 @@ def increment_item_count(item_id):
 
     try:
         # First, check if the item exists
-        cursor.execute("SELECT count FROM Items WHERE id = ?", (item_id,))
+        cursor.execute("SELECT before_count, after_count FROM Items WHERE id = ?", (item_id,))
         result = cursor.fetchone()
 
         if result is None:
             print(f"No item found with id: {item_id}")
             return False
 
-        current_count = result[0]
-        new_count = current_count + 1
+        before_count, after_count = result
 
-        # Update the count
-        cursor.execute('''
-            UPDATE Items
-            SET count = ?
-            WHERE id = ?
-        ''', (new_count, item_id))
+        if before:
+            new_count = before_count + 1
+            cursor.execute('''
+                UPDATE Items
+                SET before_count = ?
+                WHERE id = ?
+            ''', (new_count, item_id))
+            print(f"Item before_count updated. New count: {new_count}")
+        else:
+            new_count = after_count + 1
+            cursor.execute('''
+                UPDATE Items
+                SET after_count = ?
+                WHERE id = ?
+            ''', (new_count, item_id))
+            print(f"Item after_count updated. New count: {new_count}")
 
         conn.commit()
-        print(f"Item count updated. New count: {new_count}")
         return True
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
@@ -98,9 +106,9 @@ def increment_item_count(item_id):
     finally:
         conn.close()
 
-def update_item(item_id, name, description, category, price):
+def update_item(item_id, name, description, category, price, before=True):
     """
-    Update an item in the Items table. If the item already exists, increment its count;
+    Update an item in the Items table. If the item already exists, increment its before_count or after_count;
     if not, create a new item with the provided details.
 
     Args:
@@ -108,8 +116,8 @@ def update_item(item_id, name, description, category, price):
         description (str): The description of the item.
         category (str): The category of the item.
         price (str): The price of the item.
-        count (int): The initial count of the item (used only if creating a new item).
         item_id (str): The UUID of the item.
+        before (bool, optional): If True, increment before_count, otherwise increment after_count. Defaults to True.
 
     Returns:
         str: The UUID of the item.
@@ -123,9 +131,9 @@ def update_item(item_id, name, description, category, price):
         result = cursor.fetchone()
 
         if result:
-            # If the item exists, increment the count
-            print(f"Item with ID {item_id} already exists. Incrementing count.")
-            increment_item_count(item_id)
+            # If the item exists, increment the appropriate count
+            print(f"Item with ID {item_id} already exists. Incrementing {'before' if before else 'after'} count.")
+            increment_item_count(item_id, before)
         else:
             # If the item doesn't exist, insert it with the provided details
             print(f"Item with ID {item_id} does not exist. Creating new item.")
@@ -153,27 +161,28 @@ def get_item(item_id):
     print(f"Retrieving item with ID: {item_id}")
 
     try:
-      cursor.execute("SELECT * FROM Items WHERE id = ?", (item_id,))
-      result = cursor.fetchone()
+        cursor.execute("SELECT * FROM Items WHERE id = ?", (item_id,))
+        result = cursor.fetchone()
 
-      if result:
-        item = {
-          'id': result[0],
-          'name': result[1],
-          'description': result[2],
-          'category': result[3],
-          'price': result[4],
-          'count': result[5]
-        }
-        return item
-      else:
-        print(f"No item found with id: {item_id}")
-        return None
+        if result:
+            item = {
+                'id': result[0],
+                'name': result[1],
+                'description': result[2],
+                'category': result[3],
+                'price': result[4],
+                'before_count': result[5],
+                'after_count': result[6]
+            }
+            return item
+        else:
+            print(f"No item found with id: {item_id}")
+            return None
     except sqlite3.Error as e:
-      print(f"An error occurred: {e}")
-      return None
+        print(f"An error occurred: {e}")
+        return None
     finally:
-      conn.close()
+        conn.close()
 
 # Initialize the database when this module is imported
 initialize_database()
