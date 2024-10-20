@@ -8,6 +8,7 @@ from flask_cors import CORS
 from chroma import *
 
 from aws import open_s3_client, upload_image_to_s3
+from ml import process_image, process_video
 
 # import env
 import os
@@ -52,11 +53,13 @@ def upload_media():
         if file.content_type not in ['image/jpeg', 'image/png', 'image/gif', 'video/mp4']:
             return jsonify({'error': 'Invalid file type'}), 400
 
-        # TODO: send the files through the pipeline
-
-        # FOR EACH CROPPED IMAGE, UPLOAD TO S3
-        # image_url = upload_image_to_s3(s3, file)
-        # uploaded_images.append(image_url)
+        # TODO: send the files through the pipeline (call process_video or process_image)
+        if file.content_type == 'video/mp4':
+            uploads = process_video(file, s3)
+        else:
+            uploads= process_image(file, s3)
+        
+        uploaded_images += uploads
 
     # # Return the image URLs
     # return jsonify({'urls': uploaded_images}), 200
